@@ -1,8 +1,14 @@
 package mocks
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
+)
+
+const (
+	inputFmt  = "arg%d"
+	outputFmt = "ret%d"
 )
 
 type Method struct {
@@ -52,7 +58,11 @@ func (m Method) called() ast.Stmt {
 }
 
 func (m Method) inputs() (stmts []ast.Stmt) {
-	for _, input := range m.implements.Params.List {
+	for idx, input := range m.implements.Params.List {
+		if input.Names == nil {
+			// Alter m.implements directly to ensure the params are named
+			input.Names = []*ast.Ident{{Name: fmt.Sprintf(inputFmt, idx)}}
+		}
 		for _, name := range input.Names {
 			stmt := m.sendOn("m", m.name, "input", name.String())
 			stmt.Value = &ast.Ident{Name: name.String()}
@@ -67,10 +77,14 @@ func (m Method) recvFrom(receiver string, fields ...string) *ast.UnaryExpr {
 }
 
 func (m Method) returnsExprs() (exprs []ast.Expr) {
-	for _, output := range m.implements.Results.List {
+	for idx, output := range m.implements.Results.List {
+		if output.Names == nil {
+			// Skip altering m.implements here, since the return values do not need to be named.
+			exprs = append(exprs, m.recvFrom("m", m.name, "output", fmt.Sprintf(outputFmt, idx)))
+			continue
+		}
 		for _, name := range output.Names {
-			expr := m.recvFrom("m", m.name, "output", name.String())
-			exprs = append(exprs, expr)
+			exprs = append(exprs, m.recvFrom("m", m.name, "output", name.String()))
 		}
 	}
 	return exprs
