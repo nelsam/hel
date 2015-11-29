@@ -89,3 +89,32 @@ func TestMockMethodReturns(t *testing.T) {
 	src := source(expect, "foo", []ast.Decl{method.Ast()}, nil)
 	expect(src).To.Equal(string(expected))
 }
+
+func TestMockMethodUnnamedValues(t *testing.T) {
+	expect := expect.New(t)
+
+	spec := typeSpec(expect, `
+ type Foo interface {
+   Foo(int, string) (string, error)
+ }`)
+	m, err := mocks.New(spec)
+	expect(err).To.Be.Nil()
+	expect(m).Not.To.Be.Nil()
+	expect(m.Methods()).To.Have.Len(1)
+
+	method := m.Methods()[0]
+
+	expected, err := format.Source([]byte(`
+ package foo
+ 
+ func (m *mockFoo) Foo(arg0 int, arg1 string) (string, error) {
+   m.Foo.called <- true
+   m.Foo.input.arg0 <- arg0
+   m.Foo.input.arg1 <- arg1
+   return <-m.Foo.output.ret0, <-m.Foo.output.ret1
+ }`))
+	expect(err).To.Be.Nil()
+
+	src := source(expect, "foo", []ast.Decl{method.Ast()}, nil)
+	expect(src).To.Equal(string(expected))
+}
