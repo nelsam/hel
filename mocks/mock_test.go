@@ -81,3 +81,35 @@ func TestMockAst(t *testing.T) {
 	src := source(expect, "foo", decls, nil)
 	expect(src).To.Equal(string(expected))
 }
+
+func TestMockConstructor(t *testing.T) {
+	expect := expect.New(t)
+
+	spec := typeSpec(expect, `
+ type Foo interface {
+  Foo(foo string) int
+  Bar(bar int) string
+ }
+ `)
+	m, err := mocks.New(spec)
+	expect(err).To.Be.Nil()
+	expect(m).Not.To.Be.Nil()
+
+	expected, err := format.Source([]byte(`
+ package foo
+ 
+ func newMockFoo() *mockFoo {
+  m := &mockFoo{}
+  m.methods.Foo.called = make(chan bool, 300)
+  m.methods.Foo.input.foo = make(chan string, 300)
+  m.methods.Foo.output.ret0 = make(chan int, 300)
+  m.methods.Bar.called = make(chan bool, 300)
+  m.methods.Bar.input.bar = make(chan int, 300)
+  m.methods.Bar.output.ret0 = make(chan string, 300)
+  return m
+ }`))
+	expect(err).To.Be.Nil()
+
+	src := source(expect, "foo", []ast.Decl{m.Constructor(300)}, nil)
+	expect(src).To.Equal(string(expected))
+}
