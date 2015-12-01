@@ -84,7 +84,7 @@ func (m *Mock) methodStruct(method Method) *ast.StructType {
 }
 
 func (m *Mock) structType() *ast.StructType {
-	structType := &ast.StructType{
+	methodsType := &ast.StructType{
 		Fields: &ast.FieldList{},
 	}
 	for _, method := range m.Methods() {
@@ -92,7 +92,17 @@ func (m *Mock) structType() *ast.StructType {
 			Names: []*ast.Ident{{Name: method.name}},
 			Type:  m.methodStruct(method),
 		}
-		structType.Fields.List = append(structType.Fields.List, field)
+		methodsType.Fields.List = append(methodsType.Fields.List, field)
+	}
+	structType := &ast.StructType{
+		Fields: &ast.FieldList{
+			List: []*ast.Field{
+				{
+					Names: []*ast.Ident{{Name: "methods"}},
+					Type:  methodsType,
+				},
+			},
+		},
 	}
 	return structType
 }

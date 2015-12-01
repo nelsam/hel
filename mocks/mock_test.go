@@ -48,22 +48,24 @@ func TestMockAst(t *testing.T) {
  package foo
  
  type mockFoo struct {
-  Foo struct {
-   called chan bool
-   input struct {
-    foo chan string
+  methods struct {
+   Foo struct {
+    called chan bool
+    input struct {
+     foo chan string
+    }
+    output struct {
+     ret0 chan int
+    }
    }
-   output struct {
-    ret0 chan int
-   }
-  }
-  Bar struct {
-   called chan bool
-   input struct {
-    bar chan int
-   }
-   output struct {
-    ret0 chan string
+   Bar struct {
+    called chan bool
+    input struct {
+     bar chan int
+    }
+    output struct {
+     ret0 chan string
+    }
    }
   }
  }

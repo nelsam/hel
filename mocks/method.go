@@ -52,7 +52,7 @@ func (m Method) sendOn(receiver string, fields ...string) *ast.SendStmt {
 }
 
 func (m Method) called() ast.Stmt {
-	stmt := m.sendOn("m", m.name, "called")
+	stmt := m.sendOn("m", "methods", m.name, "called")
 	stmt.Value = &ast.Ident{Name: "true"}
 	return stmt
 }
@@ -84,7 +84,7 @@ func (m Method) results() []*ast.Field {
 func (m Method) inputs() (stmts []ast.Stmt) {
 	for _, input := range m.params() {
 		for _, name := range input.Names {
-			stmt := m.sendOn("m", m.name, "input", name.String())
+			stmt := m.sendOn("m", "methods", m.name, "input", name.String())
 			stmt.Value = &ast.Ident{Name: name.String()}
 			stmts = append(stmts, stmt)
 		}
@@ -99,7 +99,7 @@ func (m Method) recvFrom(receiver string, fields ...string) *ast.UnaryExpr {
 func (m Method) returnsExprs() (exprs []ast.Expr) {
 	for _, output := range m.results() {
 		for _, name := range output.Names {
-			exprs = append(exprs, m.recvFrom("m", m.name, "output", name.String()))
+			exprs = append(exprs, m.recvFrom("m", "methods", m.name, "output", name.String()))
 		}
 	}
 	return exprs
