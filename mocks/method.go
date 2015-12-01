@@ -57,12 +57,32 @@ func (m Method) called() ast.Stmt {
 	return stmt
 }
 
-func (m Method) inputs() (stmts []ast.Stmt) {
-	for idx, input := range m.implements.Params.List {
-		if input.Names == nil {
-			// Alter m.implements directly to ensure the params are named
-			input.Names = []*ast.Ident{{Name: fmt.Sprintf(inputFmt, idx)}}
+func (m Method) params() []*ast.Field {
+	for idx, f := range m.implements.Params.List {
+		if f.Names == nil {
+			// altering the field directly is okay here, since it's needed anyway
+			f.Names = []*ast.Ident{{Name: fmt.Sprintf(inputFmt, idx)}}
 		}
+	}
+	return m.implements.Params.List
+}
+
+func (m Method) results() []*ast.Field {
+	fields := make([]*ast.Field, 0, len(m.implements.Results.List))
+	for idx, f := range m.implements.Results.List {
+		if f.Names == nil {
+			// to avoid changing the method definition, make a copy
+			copy := *f
+			f = &copy
+			f.Names = []*ast.Ident{{Name: fmt.Sprintf(outputFmt, idx)}}
+		}
+		fields = append(fields, f)
+	}
+	return fields
+}
+
+func (m Method) inputs() (stmts []ast.Stmt) {
+	for _, input := range m.params() {
 		for _, name := range input.Names {
 			stmt := m.sendOn("m", m.name, "input", name.String())
 			stmt.Value = &ast.Ident{Name: name.String()}
@@ -77,12 +97,7 @@ func (m Method) recvFrom(receiver string, fields ...string) *ast.UnaryExpr {
 }
 
 func (m Method) returnsExprs() (exprs []ast.Expr) {
-	for idx, output := range m.implements.Results.List {
-		if output.Names == nil {
-			// Skip altering m.implements here, since the return values do not need to be named.
-			exprs = append(exprs, m.recvFrom("m", m.name, "output", fmt.Sprintf(outputFmt, idx)))
-			continue
-		}
+	for _, output := range m.results() {
 		for _, name := range output.Names {
 			exprs = append(exprs, m.recvFrom("m", m.name, "output", name.String()))
 		}

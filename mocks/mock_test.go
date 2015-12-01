@@ -1,6 +1,9 @@
 package mocks_test
 
 import (
+	"go/ast"
+	"go/format"
+	"go/token"
 	"testing"
 
 	"github.com/a8m/expect"
@@ -26,4 +29,53 @@ func TestMockName(t *testing.T) {
 	expect(err).To.Be.Nil()
 	expect(m).Not.To.Be.Nil()
 	expect(m.Name()).To.Equal("mockFoo")
+}
+
+func TestMockAst(t *testing.T) {
+	expect := expect.New(t)
+
+	spec := typeSpec(expect, `
+ type Foo interface {
+  Foo(foo string) int
+  Bar(bar int) string
+ }
+ `)
+	m, err := mocks.New(spec)
+	expect(err).To.Be.Nil()
+	expect(m).Not.To.Be.Nil()
+
+	expected, err := format.Source([]byte(`
+ package foo
+ 
+ type mockFoo struct {
+  Foo struct {
+   called chan bool
+   input struct {
+    foo chan string
+   }
+   output struct {
+    ret0 chan int
+   }
+  }
+  Bar struct {
+   called chan bool
+   input struct {
+    bar chan int
+   }
+   output struct {
+    ret0 chan string
+   }
+  }
+ }
+ `))
+	expect(err).To.Be.Nil()
+
+	decls := []ast.Decl{
+		&ast.GenDecl{
+			Tok:   token.TYPE,
+			Specs: []ast.Spec{m.Ast()},
+		},
+	}
+	src := source(expect, "foo", decls, nil)
+	expect(src).To.Equal(string(expected))
 }
