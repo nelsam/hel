@@ -26,7 +26,7 @@ func TestMockSimpleMethod(t *testing.T) {
 	expected, err := format.Source([]byte(`
 package foo
 func (m *mockFoo) Foo() {
-m.methods.Foo.called <- true
+m.FooCalled <- true
 }`))
 	expect(err).To.Be.Nil()
 
@@ -52,10 +52,10 @@ func TestMockMethodParams(t *testing.T) {
  package foo
  
  func (m *mockFoo) Foo(foo, bar string, baz int) {
-   m.methods.Foo.called <- true
-   m.methods.Foo.input.foo <- foo
-   m.methods.Foo.input.bar <- bar
-   m.methods.Foo.input.baz <- baz
+   m.FooCalled <- true
+   m.FooInput.foo <- foo
+   m.FooInput.bar <- bar
+   m.FooInput.baz <- baz
  }`))
 	expect(err).To.Be.Nil()
 
@@ -81,8 +81,8 @@ func TestMockMethodReturns(t *testing.T) {
  package foo
  
  func (m *mockFoo) Foo() (foo, bar string, baz int) {
-   m.methods.Foo.called <- true
-   return <-m.methods.Foo.output.foo, <-m.methods.Foo.output.bar, <-m.methods.Foo.output.baz
+   m.FooCalled <- true
+   return <-m.FooOutput.foo, <-m.FooOutput.bar, <-m.FooOutput.baz
  }`))
 	expect(err).To.Be.Nil()
 
@@ -108,10 +108,10 @@ func TestMockMethodUnnamedValues(t *testing.T) {
  package foo
  
  func (m *mockFoo) Foo(arg0 int, arg1 string) (string, error) {
-   m.methods.Foo.called <- true
-   m.methods.Foo.input.arg0 <- arg0
-   m.methods.Foo.input.arg1 <- arg1
-   return <-m.methods.Foo.output.ret0, <-m.methods.Foo.output.ret1
+   m.FooCalled <- true
+   m.FooInput.arg0 <- arg0
+   m.FooInput.arg1 <- arg1
+   return <-m.FooOutput.ret0, <-m.FooOutput.ret1
  }`))
 	expect(err).To.Be.Nil()
 

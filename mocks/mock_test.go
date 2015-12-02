@@ -48,25 +48,19 @@ func TestMockAst(t *testing.T) {
  package foo
  
  type mockFoo struct {
-  methods struct {
-   Foo struct {
-    called chan bool
-    input struct {
-     foo chan string
-    }
-    output struct {
-     ret0 chan int
-    }
-   }
-   Bar struct {
-    called chan bool
-    input struct {
-     bar chan int
-    }
-    output struct {
-     ret0 chan string
-    }
-   }
+  FooCalled chan bool
+  FooInput struct {
+   foo chan string
+  }
+  FooOutput struct {
+   ret0 chan int
+  }  
+  BarCalled chan bool
+  BarInput struct {
+   bar chan int
+  }
+  BarOutput struct {
+   ret0 chan string
   }
  }
  `))
@@ -100,12 +94,12 @@ func TestMockConstructor(t *testing.T) {
  
  func newMockFoo() *mockFoo {
   m := &mockFoo{}
-  m.methods.Foo.called = make(chan bool, 300)
-  m.methods.Foo.input.foo = make(chan string, 300)
-  m.methods.Foo.output.ret0 = make(chan int, 300)
-  m.methods.Bar.called = make(chan bool, 300)
-  m.methods.Bar.input.bar = make(chan int, 300)
-  m.methods.Bar.output.ret0 = make(chan string, 300)
+  m.FooCalled = make(chan bool, 300)
+  m.FooInput.foo = make(chan string, 300)
+  m.FooOutput.ret0 = make(chan int, 300)
+  m.BarCalled = make(chan bool, 300)
+  m.BarInput.bar = make(chan int, 300)
+  m.BarOutput.ret0 = make(chan string, 300)
   return m
  }`))
 	expect(err).To.Be.Nil()
