@@ -17,6 +17,15 @@ type Method struct {
 	implements *ast.FuncType
 }
 
+func (m Method) Ast() *ast.FuncDecl {
+	f := &ast.FuncDecl{}
+	f.Name = &ast.Ident{Name: m.name}
+	f.Type = m.implements
+	f.Recv = m.recv()
+	f.Body = m.body()
+	return f
+}
+
 func (m Method) recv() *ast.FieldList {
 	return &ast.FieldList{
 		List: []*ast.Field{
@@ -51,6 +60,9 @@ func (m Method) params() []*ast.Field {
 }
 
 func (m Method) results() []*ast.Field {
+	if m.implements.Results == nil {
+		return nil
+	}
 	fields := make([]*ast.Field, 0, len(m.implements.Results.List))
 	for idx, f := range m.implements.Results.List {
 		if f.Names == nil {
@@ -104,13 +116,4 @@ func (m Method) body() *ast.BlockStmt {
 	return &ast.BlockStmt{
 		List: stmts,
 	}
-}
-
-func (m Method) Ast() *ast.FuncDecl {
-	f := &ast.FuncDecl{}
-	f.Name = &ast.Ident{Name: m.name}
-	f.Type = m.implements
-	f.Recv = m.recv()
-	f.Body = m.body()
-	return f
 }

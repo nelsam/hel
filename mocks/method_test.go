@@ -16,7 +16,7 @@ func TestMockSimpleMethod(t *testing.T) {
  type Foo interface {
          Foo()
  }`)
-	m, err := mocks.New(spec)
+	m, err := mocks.For(spec)
 	expect(err).To.Be.Nil()
 	expect(m).Not.To.Be.Nil()
 	expect(m.Methods()).To.Have.Len(1)
@@ -41,7 +41,7 @@ func TestMockMethodParams(t *testing.T) {
  type Foo interface {
          Foo(foo, bar string, baz int)
  }`)
-	m, err := mocks.New(spec)
+	m, err := mocks.For(spec)
 	expect(err).To.Be.Nil()
 	expect(m).Not.To.Be.Nil()
 	expect(m.Methods()).To.Have.Len(1)
@@ -70,7 +70,7 @@ func TestMockMethodReturns(t *testing.T) {
  type Foo interface {
    Foo() (foo, bar string, baz int)
  }`)
-	m, err := mocks.New(spec)
+	m, err := mocks.For(spec)
 	expect(err).To.Be.Nil()
 	expect(m).Not.To.Be.Nil()
 	expect(m.Methods()).To.Have.Len(1)
@@ -97,7 +97,7 @@ func TestMockMethodUnnamedValues(t *testing.T) {
  type Foo interface {
    Foo(int, string) (string, error)
  }`)
-	m, err := mocks.New(spec)
+	m, err := mocks.For(spec)
 	expect(err).To.Be.Nil()
 	expect(m).Not.To.Be.Nil()
 	expect(m.Methods()).To.Have.Len(1)

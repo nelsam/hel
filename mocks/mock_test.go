@@ -3,7 +3,6 @@ package mocks_test
 import (
 	"go/ast"
 	"go/format"
-	"go/token"
 	"testing"
 
 	"github.com/a8m/expect"
@@ -16,7 +15,7 @@ func TestNewErrorsForNonInterfaceTypes(t *testing.T) {
 	expect := expect.New(t)
 
 	spec := typeSpec(expect, "type Foo func()")
-	_, err := mocks.New(spec)
+	_, err := mocks.For(spec)
 	expect(err).Not.To.Be.Nil()
 	expect(err.Error()).To.Equal("TypeSpec.Type expected to be *ast.InterfaceType, was *ast.FuncType")
 }
@@ -25,22 +24,23 @@ func TestMockName(t *testing.T) {
 	expect := expect.New(t)
 
 	spec := typeSpec(expect, "type Foo interface{}")
-	m, err := mocks.New(spec)
+	m, err := mocks.For(spec)
 	expect(err).To.Be.Nil()
 	expect(m).Not.To.Be.Nil()
 	expect(m.Name()).To.Equal("mockFoo")
 }
 
-func TestMockAst(t *testing.T) {
+func TestMockTypeDecl(t *testing.T) {
 	expect := expect.New(t)
 
 	spec := typeSpec(expect, `
  type Foo interface {
   Foo(foo string) int
   Bar(bar int) string
+  Baz()
  }
  `)
-	m, err := mocks.New(spec)
+	m, err := mocks.For(spec)
 	expect(err).To.Be.Nil()
 	expect(m).Not.To.Be.Nil()
 
@@ -62,17 +62,12 @@ func TestMockAst(t *testing.T) {
   BarOutput struct {
    ret0 chan string
   }
+  BazCalled chan bool
  }
  `))
 	expect(err).To.Be.Nil()
 
-	decls := []ast.Decl{
-		&ast.GenDecl{
-			Tok:   token.TYPE,
-			Specs: []ast.Spec{m.Ast()},
-		},
-	}
-	src := source(expect, "foo", decls, nil)
+	src := source(expect, "foo", []ast.Decl{m.Decl()}, nil)
 	expect(src).To.Equal(string(expected))
 }
 
@@ -85,7 +80,7 @@ func TestMockConstructor(t *testing.T) {
   Bar(bar int) string
  }
  `)
-	m, err := mocks.New(spec)
+	m, err := mocks.For(spec)
 	expect(err).To.Be.Nil()
 	expect(m).Not.To.Be.Nil()
 
@@ -106,4 +101,26 @@ func TestMockConstructor(t *testing.T) {
 
 	src := source(expect, "foo", []ast.Decl{m.Constructor(300)}, nil)
 	expect(src).To.Equal(string(expected))
+}
+
+func TestMockAst(t *testing.T) {
+	expect := expect.New(t)
+
+	spec := typeSpec(expect, `
+ type Foo interface {
+  Bar(bar string)
+  Baz() (baz int)
+ }`)
+	m, err := mocks.For(spec)
+	expect(err).To.Be.Nil()
+	expect(m).Not.To.Be.Nil()
+
+	expect(m.Methods()).To.Have.Len(2)
+
+	decls := m.Ast(300)
+	expect(decls).To.Have.Len(4)
+	expect(decls[0]).To.Equal(m.Decl())
+	expect(decls[1]).To.Equal(m.Constructor(300))
+	expect(decls[2]).To.Equal(m.Methods()[0].Ast())
+	expect(decls[3]).To.Equal(m.Methods()[1].Ast())
 }
