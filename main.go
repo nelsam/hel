@@ -72,7 +72,7 @@ func init() {
 	cmd.Flags().StringSliceP("package", "p", []string{"."}, "The package(s) to generate mocks for.")
 	cmd.Flags().StringSliceP("type", "t", []string{}, "The type(s) to generate mocks for.  If no types "+
 		"are passed in, all exported interface types will be generated.")
-	cmd.Flags().StringP("output", "o", "hel_test.go", "The file to write generated mocks to.  Since hel does "+
+	cmd.Flags().StringP("output", "o", "helheim_test.go", "The file to write generated mocks to.  Since hel does "+
 		"not generate exported types, this file will be saved directly in all packages with generated mocks.  "+
 		"Also note that, since the types are not exported, you will want the file to end in '_test.go'.")
 	cmd.Flags().IntP("chan-size", "s", 100, "The size of channels used for method calls.")
