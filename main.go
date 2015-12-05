@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/nelsam/hel/mocks"
@@ -12,9 +14,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var cmd *cobra.Command
+var (
+	cmd           *cobra.Command
+	goimportsPath string
+)
 
 func init() {
+	output, err := exec.Command("which", "goimports").Output()
+	if err != nil {
+		fmt.Println("Could not locate goimports: ", err.Error())
+		fmt.Println("If goimports is not installed, please install it somewhere in your path.  " +
+			"See https://godoc.org/golang.org/x/tools/cmd/goimports.")
+		os.Exit(1)
+	}
+	goimportsPath = strings.TrimSpace(string(output))
+
 	cmd = &cobra.Command{
 		Use:   "hel",
 		Short: "A mock generator for Go",
@@ -61,7 +75,11 @@ func init() {
 			fmt.Printf("Generating mocks in %s", outputName)
 			progress(func() {
 				for _, types := range typeList {
-					if err := makeMocks(types, outputName, chanSize); err != nil {
+					mockPath, err := makeMocks(types, outputName, chanSize)
+					if err != nil {
+						panic(err)
+					}
+					if err = exec.Command(goimportsPath, "-w", mockPath).Run(); err != nil {
 						panic(err)
 					}
 				}
@@ -78,20 +96,21 @@ func init() {
 	cmd.Flags().IntP("chan-size", "s", 100, "The size of channels used for method calls.")
 }
 
-func makeMocks(types types.Types, fileName string, chanSize int) error {
+func makeMocks(types types.Types, fileName string, chanSize int) (filePath string, err error) {
 	mocks, err := mocks.Generate(types)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if len(mocks) == 0 {
-		return nil
+		return "", nil
 	}
-	f, err := os.Create(filepath.Join(types.Dir(), fileName))
+	filePath = filepath.Join(types.Dir(), fileName)
+	f, err := os.Create(filePath)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer f.Close()
-	return mocks.Output(types.TestPackage(), chanSize, f)
+	return filePath, mocks.Output(types.TestPackage(), chanSize, f)
 }
 
 func progress(f func()) {
