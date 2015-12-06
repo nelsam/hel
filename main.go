@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"time"
 
@@ -60,19 +61,31 @@ func init() {
 			if err != nil {
 				panic(err)
 			}
-			fmt.Printf("Generating mocks for packages %v", packagePatterns)
-			var packageList []packages.Package
+			fmt.Printf("Loading directories matching pattern"+pluralize(packagePatterns, "", "s")+" %v", packagePatterns)
+			var dirList []packages.Dir
 			progress(func() {
-				packageList = packages.Load(packagePatterns...)
+				dirList = packages.Load(packagePatterns...)
 			})
 			fmt.Print("\n")
-			fmt.Printf("Generating mocks for types %v", typePatterns)
+   fmt.Println("Found directories:")
+   for _, dir := range dirList {
+    fmt.Println("  "+dir.Path())
+   }
+   fmt.Print("\n")
+
+			fmt.Printf("Loading interface types in matching directories")
 			var typeList []types.Types
 			progress(func() {
-				typeList = types.Load(packageList...) //.Filter(typePatterns...)
+				godirs := make([]types.GoDir, 0, len(dirList))
+				for _, dir := range dirList {
+					godirs = append(godirs, dir)
+				}
+				typeList = types.Load(godirs...) //.Filter(typePatterns...)
+    _ = typePatterns
 			})
-			fmt.Print("\n")
-			fmt.Printf("Generating mocks in %s", outputName)
+			fmt.Print("\n\n")
+
+			fmt.Printf("Generating mocks in output file %s", outputName)
 			progress(func() {
 				for _, types := range typeList {
 					mockPath, err := makeMocks(types, outputName, chanSize)
@@ -135,6 +148,25 @@ func showProgress(stop <-chan struct{}, done chan<- struct{}) {
 			return
 		}
 	}
+}
+
+type lengther interface {
+	Len() int
+}
+
+func pluralize(values interface{}, singular, plural string) string {
+	length := findLength(values)
+	if length == 1 {
+		return singular
+	}
+	return plural
+}
+
+func findLength(values interface{}) int {
+	if lengther, ok := values.(lengther); ok {
+		return lengther.Len()
+	}
+	return reflect.ValueOf(values).Len()
 }
 
 func main() {
