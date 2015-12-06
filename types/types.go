@@ -11,85 +11,85 @@ type GoDir interface {
 	Packages() map[string]*ast.Package
 }
 
-type TypeDir struct {
+type Dir struct {
 	dir     string
 	testPkg string
 	types   []*ast.TypeSpec
 }
 
-func (t TypeDir) Dir() string {
-	return t.dir
+func (d Dir) Dir() string {
+	return d.dir
 }
 
-func (t TypeDir) Len() int {
-	return len(t.types)
+func (d Dir) Len() int {
+	return len(d.types)
 }
 
-func (t TypeDir) TestPackage() string {
-	return t.testPkg
+func (d Dir) TestPackage() string {
+	return d.testPkg
 }
 
-func (t TypeDir) ExportedTypes() []*ast.TypeSpec {
-	return t.types
+func (d Dir) ExportedTypes() []*ast.TypeSpec {
+	return d.types
 }
 
-func (t TypeDir) Filter(matchers ...*regexp.Regexp) TypeDir {
-	oldTypes := t.ExportedTypes()
-	t.types = make([]*ast.TypeSpec, 0, t.Len())
+func (d Dir) Filter(matchers ...*regexp.Regexp) Dir {
+	oldTypes := d.ExportedTypes()
+	d.types = make([]*ast.TypeSpec, 0, d.Len())
 	for _, typ := range oldTypes {
 		for _, matcher := range matchers {
 			if !matcher.MatchString(typ.Name.String()) {
 				continue
 			}
-			t.types = append(t.types, typ)
+			d.types = append(d.types, typ)
 			break
 		}
 	}
-	return t
+	return d
 }
 
-type TypeDirs []TypeDir
+type Dirs []Dir
 
-func (t TypeDirs) Filter(patterns ...string) (dirs TypeDirs) {
+func (d Dirs) Filter(patterns ...string) (dirs Dirs) {
 	if len(patterns) == 0 {
-		return t
+		return d
 	}
 	matchers := make([]*regexp.Regexp, 0, len(patterns))
 	for _, pattern := range patterns {
 		matchers = append(matchers, regexp.MustCompile("^"+pattern+"$"))
 	}
-	for _, typeDir := range t {
-		typeDir = typeDir.Filter(matchers...)
-		if typeDir.Len() > 0 {
-			dirs = append(dirs, typeDir)
+	for _, dir := range d {
+		dir = dir.Filter(matchers...)
+		if dir.Len() > 0 {
+			dirs = append(dirs, dir)
 		}
 	}
 	return dirs
 }
 
-func Load(dirs ...GoDir) TypeDirs {
-	types := make(TypeDirs, 0, len(dirs))
-	for _, dir := range dirs {
-		t := TypeDir{
+func Load(goDirs ...GoDir) Dirs {
+	typeDirs := make(Dirs, 0, len(goDirs))
+	for _, dir := range goDirs {
+		d := Dir{
 			dir: dir.Path(),
 		}
 		for name, pkg := range dir.Packages() {
-			if t.testPkg == "" {
+			if d.testPkg == "" {
 				// This will get overridden if we later find pre-existing test
 				// files in one of the packages.  As such, don't worry about
 				// test packages getting an extra "_test", since test packages
 				// will be made up of only test files.
-				t.testPkg = name + "_test"
+				d.testPkg = name + "_test"
 			}
 			newTypes, testsFound := loadPkgTypeSpecs(pkg)
 			if testsFound {
-				t.testPkg = name
+				d.testPkg = name
 			}
-			t.types = append(t.types, newTypes...)
+			d.types = append(d.types, newTypes...)
 		}
-		types = append(types, t)
+		typeDirs = append(typeDirs, d)
 	}
-	return types
+	return typeDirs
 }
 
 func loadPkgTypeSpecs(pkg *ast.Package) (specs []*ast.TypeSpec, hasTests bool) {
