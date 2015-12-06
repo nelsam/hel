@@ -2,6 +2,7 @@ package types
 
 import (
 	"go/ast"
+	"regexp"
 	"strings"
 )
 
@@ -10,32 +11,66 @@ type GoDir interface {
 	Packages() map[string]*ast.Package
 }
 
-type Types struct {
+type TypeDir struct {
 	dir     string
 	testPkg string
 	types   []*ast.TypeSpec
 }
 
-func (t Types) Dir() string {
+func (t TypeDir) Dir() string {
 	return t.dir
 }
 
-func (t Types) Len() int {
+func (t TypeDir) Len() int {
 	return len(t.types)
 }
 
-func (t Types) TestPackage() string {
+func (t TypeDir) TestPackage() string {
 	return t.testPkg
 }
 
-func (t Types) ExportedTypes() []*ast.TypeSpec {
+func (t TypeDir) ExportedTypes() []*ast.TypeSpec {
 	return t.types
 }
 
-func Load(dirs ...GoDir) []Types {
-	types := make([]Types, 0, len(dirs))
+func (t TypeDir) Filter(matchers ...*regexp.Regexp) TypeDir {
+	oldTypes := t.ExportedTypes()
+	t.types = make([]*ast.TypeSpec, 0, t.Len())
+	for _, typ := range oldTypes {
+		for _, matcher := range matchers {
+			if !matcher.MatchString(typ.Name.String()) {
+				continue
+			}
+			t.types = append(t.types, typ)
+			break
+		}
+	}
+	return t
+}
+
+type TypeDirs []TypeDir
+
+func (t TypeDirs) Filter(patterns ...string) (dirs TypeDirs) {
+	if len(patterns) == 0 {
+		return t
+	}
+	matchers := make([]*regexp.Regexp, 0, len(patterns))
+	for _, pattern := range patterns {
+		matchers = append(matchers, regexp.MustCompile("^"+pattern+"$"))
+	}
+	for _, typeDir := range t {
+		typeDir = typeDir.Filter(matchers...)
+		if typeDir.Len() > 0 {
+			dirs = append(dirs, typeDir)
+		}
+	}
+	return dirs
+}
+
+func Load(dirs ...GoDir) TypeDirs {
+	types := make(TypeDirs, 0, len(dirs))
 	for _, dir := range dirs {
-		t := Types{
+		t := TypeDir{
 			dir: dir.Path(),
 		}
 		for name, pkg := range dir.Packages() {
