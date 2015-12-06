@@ -2,12 +2,13 @@ package types
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"strings"
-
-	"github.com/nelsam/hel/packages"
 )
+
+type GoDir interface {
+	Path() string
+	Packages() map[string]*ast.Package
+}
 
 type Types struct {
 	dir     string
@@ -31,26 +32,25 @@ func (t Types) ExportedTypes() []*ast.TypeSpec {
 	return t.types
 }
 
-func Load(packages ...packages.Package) []Types {
-	types := make([]Types, 0, len(packages))
-	for _, pkg := range packages {
+func Load(dirs ...GoDir) []Types {
+	types := make([]Types, 0, len(dirs))
+	for _, dir := range dirs {
 		t := Types{
-			dir: pkg.Path,
+			dir: dir.Path(),
 		}
-		pkgs, err := parser.ParseDir(token.NewFileSet(), pkg.Path, nil, 0)
-		if err != nil {
-			panic(err)
-		}
-		for name, pkg := range pkgs {
-			if strings.HasSuffix(name, "_test") {
-				t.testPkg = name
-				continue
+		for name, pkg := range dir.Packages() {
+			if t.testPkg == "" {
+				// This will get overridden if we later find pre-existing test
+				// files in one of the packages.  As such, don't worry about
+				// test packages getting an extra "_test", since test packages
+				// will be made up of only test files.
+				t.testPkg = name + "_test"
 			}
 			newTypes, testsFound := loadPkgTypeSpecs(pkg)
-			t.types = append(t.types, newTypes...)
-			if testsFound && t.testPkg == "" {
+			if testsFound {
 				t.testPkg = name
 			}
+			t.types = append(t.types, newTypes...)
 		}
 		types = append(types, t)
 	}
