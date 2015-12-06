@@ -1,7 +1,10 @@
 package packages
 
 import (
+	"go/ast"
 	"go/build"
+	"go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,22 +24,30 @@ func init() {
 	}
 }
 
-type Package struct {
-	Name string
-	Path string
+type Dir struct {
+	path string
 }
 
-func Load(pkgPatterns ...string) (packages []Package) {
+func (d Dir) Path() string {
+	return d.path
+}
+
+func (d Dir) Packages() map[string]*ast.Package {
+	packages, err := parser.ParseDir(token.NewFileSet(), d.Path(), nil, 0)
+	if err != nil {
+		panic(err)
+	}
+	return packages
+}
+
+func Load(pkgPatterns ...string) (dirs []Dir) {
 	pkgPatterns = parsePatterns(pkgPatterns...)
 	for _, pkgPattern := range pkgPatterns {
 		pkg, err := build.Import(pkgPattern, cwd, build.AllowBinary)
 		if err != nil {
 			panic(err)
 		}
-		packages = append(packages, Package{
-			Name: pkg.Name,
-			Path: pkg.Dir,
-		})
+		dirs = append(dirs, Dir{path: pkg.Dir})
 	}
 	return
 }
