@@ -10,6 +10,8 @@ import (
 	"github.com/a8m/expect"
 )
 
+const packagePrefix = "package foo\n\n"
+
 func source(expect func(interface{}) *expect.Expect, pkg string, decls []ast.Decl, scope *ast.Scope) string {
 	buf := bytes.Buffer{}
 	f := &ast.File{

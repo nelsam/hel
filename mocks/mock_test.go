@@ -9,8 +9,6 @@ import (
 	"github.com/nelsam/hel/mocks"
 )
 
-const packagePrefix = "package foo\n\n"
-
 func TestNewErrorsForNonInterfaceTypes(t *testing.T) {
 	expect := expect.New(t)
 
