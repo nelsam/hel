@@ -74,21 +74,20 @@ func init() {
    fmt.Print("\n")
 
 			fmt.Printf("Loading interface types in matching directories")
-			var typeList []types.Types
+			var typeDirs types.Dirs
 			progress(func() {
 				godirs := make([]types.GoDir, 0, len(dirList))
 				for _, dir := range dirList {
 					godirs = append(godirs, dir)
 				}
-				typeList = types.Load(godirs...) //.Filter(typePatterns...)
-    _ = typePatterns
+				typeDirs = types.Load(godirs...).Filter(typePatterns...)
 			})
 			fmt.Print("\n\n")
 
 			fmt.Printf("Generating mocks in output file %s", outputName)
 			progress(func() {
-				for _, types := range typeList {
-					mockPath, err := makeMocks(types, outputName, chanSize)
+				for _, typeDir := range typeDirs {
+					mockPath, err := makeMocks(typeDir, outputName, chanSize)
 					if err != nil {
 						panic(err)
 					}
@@ -109,7 +108,7 @@ func init() {
 	cmd.Flags().IntP("chan-size", "s", 100, "The size of channels used for method calls.")
 }
 
-func makeMocks(types types.Types, fileName string, chanSize int) (filePath string, err error) {
+func makeMocks(types types.Dir, fileName string, chanSize int) (filePath string, err error) {
 	mocks, err := mocks.Generate(types)
 	if err != nil {
 		return "", err
