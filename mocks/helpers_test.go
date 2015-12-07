@@ -41,3 +41,12 @@ func typeSpec(expect func(interface{}) *expect.Expect, spec string) *ast.TypeSpe
 	}
 	return nil
 }
+
+func method(expect func(interface{}) *expect.Expect, spec *ast.TypeSpec) *ast.FuncType {
+	inter, ok := spec.Type.(*ast.InterfaceType)
+	expect(ok).To.Be.Ok()
+	expect(inter.Methods.List).To.Have.Len(1)
+	f, ok := inter.Methods.List[0].Type.(*ast.FuncType)
+	expect(ok).To.Be.Ok()
+	return f
+}
