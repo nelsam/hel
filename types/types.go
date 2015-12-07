@@ -13,6 +13,7 @@ type GoDir interface {
 
 type Dir struct {
 	dir     string
+	pkg     string
 	testPkg string
 	types   []*ast.TypeSpec
 }
@@ -23,6 +24,10 @@ func (d Dir) Dir() string {
 
 func (d Dir) Len() int {
 	return len(d.types)
+}
+
+func (d Dir) Package() string {
+	return d.pkg
 }
 
 func (d Dir) TestPackage() string {
@@ -84,6 +89,9 @@ func Load(goDirs ...GoDir) Dirs {
 			newTypes, testsFound := loadPkgTypeSpecs(pkg)
 			if testsFound {
 				d.testPkg = name
+			}
+			if d.pkg == "" || !testsFound {
+				d.pkg = name
 			}
 			d.types = append(d.types, newTypes...)
 		}

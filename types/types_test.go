@@ -25,6 +25,7 @@ func TestLoad_NoTestFiles(t *testing.T) {
 	expect(found).To.Have.Len(1)
 	expect(found[0].Len()).To.Equal(1)
 	expect(found[0].Dir()).To.Equal("/some/path")
+	expect(found[0].Package()).To.Equal("foo")
 	expect(found[0].TestPackage()).To.Equal("foo_test")
 }
 
@@ -50,6 +51,7 @@ func TestLoad_TestFilesInTestPackage(t *testing.T) {
 	found := types.Load(mockGoDir)
 	expect(found).To.Have.Len(1)
 	expect(found[0].Len()).To.Equal(1)
+	expect(found[0].Package()).To.Equal("foo")
 	expect(found[0].TestPackage()).To.Equal("foo_test")
 }
 
@@ -70,6 +72,7 @@ func TestLoad_TestFilesInNonTestPackage(t *testing.T) {
 	found := types.Load(mockGoDir)
 	expect(found).To.Have.Len(1)
 	expect(found[0].Len()).To.Equal(1)
+	expect(found[0].Package()).To.Equal("foo")
 	expect(found[0].TestPackage()).To.Equal("foo")
 }
 
