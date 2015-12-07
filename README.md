@@ -54,7 +54,7 @@ Some examples:
 #### In a file (e.g. `generate.go`) in the root of your project:
 
 ```go
-//go:generate hel --package=./...
+//go:generate hel --package ./...
 ```
 
 The above command would find all exported interface types in the
