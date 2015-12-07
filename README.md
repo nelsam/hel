@@ -1,3 +1,5 @@
+[![Build Status](https://drone.io/github.com/nelsam/hel/status.png)](https://drone.io/github.com/nelsam/hel/latest)
+
 # Hel
 
 Hel is the norse goddess that rules over Helheim, where the souls
