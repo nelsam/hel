@@ -44,7 +44,7 @@ func TestOutput(t *testing.T) {
   }`),
 		typeSpec(expect, `
   type Bar interface {
-   Foo(foo string)
+   Foo(foo string) Foo
    Baz()
   }`),
 	}
@@ -85,6 +85,9 @@ func TestOutput(t *testing.T) {
   FooInput struct {
    foo chan string
   }
+  FooOutput struct {
+   ret0 chan Foo
+  }
   BazCalled chan bool
  }
  
@@ -92,12 +95,70 @@ func TestOutput(t *testing.T) {
   m := &mockBar{}
   m.FooCalled = make(chan bool, 100)
   m.FooInput.foo = make(chan string, 100)
+  m.FooOutput.ret0 = make(chan Foo, 100)
   m.BazCalled = make(chan bool, 100)
   return m
  }
- func (m *mockBar) Foo(foo string) {
+ func (m *mockBar) Foo(foo string) Foo {
   m.FooCalled <- true
   m.FooInput.foo <- foo
+  return <-m.FooOutput.ret0
+ } 
+ func (m *mockBar) Baz() {
+  m.BazCalled <- true
+ }
+ `))
+	expect(err).To.Be.Nil()
+	expect(buf.String()).To.Equal(string(expected))
+
+	m.PrependLocalPackage("foo")
+	buf = bytes.Buffer{}
+	m.Output("foo_test", 100, &buf)
+
+	expected, err = format.Source([]byte(`
+ package foo_test
+ 
+ type mockFoo struct {
+  BarCalled chan bool
+  BarOutput struct {
+   ret0 chan int
+  }
+ }
+ 
+ func newMockFoo() *mockFoo {
+  m := &mockFoo{}
+  m.BarCalled = make(chan bool, 100)
+  m.BarOutput.ret0 = make(chan int, 100)
+  return m
+ } 
+ func (m *mockFoo) Bar() int {
+  m.BarCalled <- true
+  return <-m.BarOutput.ret0
+ }
+ 
+ type mockBar struct {
+  FooCalled chan bool
+  FooInput struct {
+   foo chan string
+  }
+  FooOutput struct {
+   ret0 chan foo.Foo
+  }
+  BazCalled chan bool
+ }
+ 
+ func newMockBar() *mockBar {
+  m := &mockBar{}
+  m.FooCalled = make(chan bool, 100)
+  m.FooInput.foo = make(chan string, 100)
+  m.FooOutput.ret0 = make(chan foo.Foo, 100)
+  m.BazCalled = make(chan bool, 100)
+  return m
+ }
+ func (m *mockBar) Foo(foo string) foo.Foo {
+  m.FooCalled <- true
+  m.FooInput.foo <- foo
+  return <-m.FooOutput.ret0
  } 
  func (m *mockBar) Baz() {
   m.BazCalled <- true
