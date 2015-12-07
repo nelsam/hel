@@ -62,7 +62,7 @@ project and generate mocks in `helheim_test.go` in each of the
 packages it finds interfaces to mock.
 
 #### In a file (e.g. `generate.go`) in each package you want mocks
-     to be generated for:
+  to be generated for:
 
 ```go
 //go:generate hel
