@@ -39,9 +39,44 @@ github releases, as well.
 
 ## Usage
 
-Often, you can just run `hel` without any options in the directory you
-want to generate mocks for.  Mocks will be saved in a file called
-`helheim_test.go` by default.
+At its simplest, you can just run `hel` without any options in the
+directory you want to generate mocks for.  Mocks will be saved in a
+file called `helheim_test.go` by default.
 
 See `hel -h` or `hel --help` for command line options.  Most flags
 allow multiple calls (e.g. `-t ".*Foo" -t ".*Bar"`).
+
+## Go Generate
+
+Adding comments for `go generate` to use Hel is relatively flexible.
+Some examples:
+
+#### In a file (e.g. `generate.go`) in the root of your project:
+
+```go
+//go:generate hel --package=./...
+```
+
+The above command would find all exported interface types in the
+project and generate mocks in `helheim_test.go` in each of the
+packages it finds interfaces to mock.
+
+#### In a file (e.g. `generate.go`) in each package you want mocks
+     to be generated for:
+
+```go
+//go:generate hel
+```
+
+The above command would generate mocks for all exported types in
+the current package in `helheim_test.go`
+
+#### Above each interface type you want a mock for
+
+```go
+//go:generate hel --type Foo --output mock_foo_test.go
+
+type Foo interface {
+   Foo() string
+}
+```
