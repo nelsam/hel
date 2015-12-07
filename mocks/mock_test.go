@@ -34,7 +34,7 @@ func TestMockTypeDecl(t *testing.T) {
 	spec := typeSpec(expect, `
  type Foo interface {
   Foo(foo string) int
-  Bar(bar int) string
+  Bar(bar int) Foo
   Baz()
  }
  `)
@@ -58,7 +58,7 @@ func TestMockTypeDecl(t *testing.T) {
    bar chan int
   }
   BarOutput struct {
-   ret0 chan string
+   ret0 chan Foo
   }
   BazCalled chan bool
  }
@@ -66,6 +66,34 @@ func TestMockTypeDecl(t *testing.T) {
 	expect(err).To.Be.Nil()
 
 	src := source(expect, "foo", []ast.Decl{m.Decl()}, nil)
+	expect(src).To.Equal(string(expected))
+
+	m.PrependLocalPackage("foo")
+
+	expected, err = format.Source([]byte(`
+ package foo
+ 
+ type mockFoo struct {
+  FooCalled chan bool
+  FooInput struct {
+   foo chan string
+  }
+  FooOutput struct {
+   ret0 chan int
+  }
+  BarCalled chan bool
+  BarInput struct {
+   bar chan int
+  }
+  BarOutput struct {
+   ret0 chan foo.Foo
+  }
+  BazCalled chan bool
+ }
+ `))
+	expect(err).To.Be.Nil()
+
+	src = source(expect, "foo", []ast.Decl{m.Decl()}, nil)
 	expect(src).To.Equal(string(expected))
 }
 
