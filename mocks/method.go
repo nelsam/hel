@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
+	"unicode"
 )
 
 const (
@@ -12,9 +13,17 @@ const (
 )
 
 type Method struct {
-	receiver   *Mock
+	receiver   Mock
 	name       string
 	implements *ast.FuncType
+}
+
+func MethodFor(receiver Mock, name string, typ *ast.FuncType) Method {
+	return Method{
+		receiver:   receiver,
+		name:       name,
+		implements: typ,
+	}
 }
 
 func (m Method) Ast() *ast.FuncDecl {
@@ -85,6 +94,28 @@ func (m Method) inputs() (stmts []ast.Stmt) {
 		}
 	}
 	return stmts
+}
+
+func (m Method) PrependLocalPackage(name string) {
+	m.prependPackage(name, m.implements.Results)
+	m.prependPackage(name, m.implements.Params)
+}
+
+func (m Method) prependPackage(name string, fields *ast.FieldList) {
+	if fields == nil {
+		return
+	}
+	for _, field := range fields.List {
+		ident, ok := field.Type.(*ast.Ident)
+		if !ok {
+			continue
+		}
+		if !unicode.IsUpper(rune(ident.String()[0])) {
+			// Assume a built-in type, at least for now
+			continue
+		}
+		field.Type = selectors(name, ident.String())
+	}
 }
 
 func (m Method) recvFrom(receiver string, fields ...string) *ast.UnaryExpr {
