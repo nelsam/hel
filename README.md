@@ -79,3 +79,6 @@ type Foo interface {
    Foo() string
 }
 ```
+
+The above command would generate a mock for the Foo type in
+`mock_foo_test.go`
