@@ -110,19 +110,27 @@ func TestFilter(t *testing.T) {
 	fooPrefixes := found.Filter("Foo.*")
 	expect(fooPrefixes).To.Have.Len(1)
 	expect(fooPrefixes[0].Len()).To.Equal(2)
-	expect(fooPrefixes[0].ExportedTypes()[0].Name.String()).To.Equal("Foo")
-	expect(fooPrefixes[0].ExportedTypes()[1].Name.String()).To.Equal("FooBar")
+	expectNamesToMatch(expect, fooPrefixes[0].ExportedTypes(), "Foo", "FooBar")
 
 	fooPostfixes := found.Filter(".*Foo")
 	expect(fooPostfixes).To.Have.Len(1)
 	expect(fooPostfixes[0].Len()).To.Equal(2)
-	expect(fooPostfixes[0].ExportedTypes()[0].Name.String()).To.Equal("Foo")
-	expect(fooPostfixes[0].ExportedTypes()[1].Name.String()).To.Equal("BarFoo")
+	expectNamesToMatch(expect, fooPostfixes[0].ExportedTypes(), "Foo", "BarFoo")
 
 	fooContainers := found.Filter("Foo.*", ".*Foo")
 	expect(fooContainers).To.Have.Len(1)
 	expect(fooContainers[0].Len()).To.Equal(3)
-	expect(fooContainers[0].ExportedTypes()[0].Name.String()).To.Equal("Foo")
-	expect(fooContainers[0].ExportedTypes()[1].Name.String()).To.Equal("FooBar")
-	expect(fooContainers[0].ExportedTypes()[2].Name.String()).To.Equal("BarFoo")
+	expectNamesToMatch(expect, fooContainers[0].ExportedTypes(), "Foo", "FooBar", "BarFoo")
+}
+
+func expectNamesToMatch(expect func(interface{}) *expect.Expect, list []*ast.TypeSpec, names ...string) {
+	listNames := make(map[string]struct{}, len(list))
+	for _, spec := range list {
+		listNames[spec.Name.String()] = struct{}{}
+	}
+	expectedNames := make(map[string]struct{}, len(names))
+	for _, name := range names {
+		expectedNames[name] = struct{}{}
+	}
+	expect(listNames).To.Equal(expectedNames)
 }
