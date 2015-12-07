@@ -26,23 +26,24 @@ func For(typ *ast.TypeSpec) (Mock, error) {
 	return m, nil
 }
 
-func (m *Mock) Name() string {
+func (m Mock) Name() string {
 	return "mock" + strings.ToUpper(m.typeName[0:1]) + m.typeName[1:]
 }
 
-func (m *Mock) Methods() (methods []Method) {
+func (m Mock) Methods() (methods []Method) {
 	for _, method := range m.implements.Methods.List {
 		switch methodType := method.Type.(type) {
 		case *ast.FuncType:
-			newMethod := Method{
-				receiver:   m,
-				name:       method.Names[0].String(),
-				implements: methodType,
-			}
-			methods = append(methods, newMethod)
+			methods = append(methods, MethodFor(m, method.Names[0].String(), methodType))
 		}
 	}
 	return
+}
+
+func (m Mock) PrependLocalPackage(name string) {
+	for _, m := range m.Methods() {
+		m.PrependLocalPackage(name)
+	}
 }
 
 func (m Mock) Constructor(chanSize int) *ast.FuncDecl {
