@@ -7,6 +7,8 @@ import (
 	"io"
 )
 
+//go:generate hel --type TypeFinder --output mock_type_finder_test.go
+
 type TypeFinder interface {
 	ExportedTypes() []*ast.TypeSpec
 }

@@ -6,6 +6,8 @@ import (
 	"strings"
 )
 
+//go:generate hel --type GoDir --output mock_go_dir_test.go
+
 type GoDir interface {
 	Path() string
 	Packages() map[string]*ast.Package
