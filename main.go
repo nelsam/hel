@@ -67,11 +67,11 @@ func init() {
 				dirList = packages.Load(packagePatterns...)
 			})
 			fmt.Print("\n")
-   fmt.Println("Found directories:")
-   for _, dir := range dirList {
-    fmt.Println("  "+dir.Path())
-   }
-   fmt.Print("\n")
+			fmt.Println("Found directories:")
+			for _, dir := range dirList {
+				fmt.Println("  " + dir.Path())
+			}
+			fmt.Print("\n")
 
 			fmt.Printf("Loading interface types in matching directories")
 			var typeDirs types.Dirs
@@ -115,6 +115,9 @@ func makeMocks(types types.Dir, fileName string, chanSize int) (filePath string,
 	}
 	if len(mocks) == 0 {
 		return "", nil
+	}
+	if types.Package() != types.TestPackage() {
+		mocks.PrependLocalPackage(types.Package())
 	}
 	filePath = filepath.Join(types.Dir(), fileName)
 	f, err := os.Create(filePath)
