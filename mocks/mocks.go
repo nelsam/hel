@@ -21,6 +21,12 @@ func (m Mocks) Output(pkg string, chanSize int, dest io.Writer) error {
 	return format.Node(dest, token.NewFileSet(), f)
 }
 
+func (m Mocks) PrependLocalPackage(name string) {
+	for _, m := range m {
+		m.PrependLocalPackage(name)
+	}
+}
+
 func (m Mocks) decls(chanSize int) (decls []ast.Decl) {
 	for _, mock := range m {
 		decls = append(decls, mock.Ast(chanSize)...)
