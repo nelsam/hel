@@ -91,8 +91,10 @@ func init() {
 					if err != nil {
 						panic(err)
 					}
-					if err = exec.Command(goimportsPath, "-w", mockPath).Run(); err != nil {
-						panic(err)
+					if mockPath != "" {
+						if err = exec.Command(goimportsPath, "-w", mockPath).Run(); err != nil {
+							panic(err)
+						}
 					}
 				}
 			})
