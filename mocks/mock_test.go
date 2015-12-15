@@ -97,6 +97,37 @@ func TestMockTypeDecl(t *testing.T) {
 	expect(src).To.Equal(string(expected))
 }
 
+func TestMockTypeDecl_DirectionalChansGetParens(t *testing.T) {
+	expect := expect.New(t)
+
+	spec := typeSpec(expect, `
+ type Foo interface {
+  Foo(foo chan<- int) <-chan int
+ }
+ `)
+	m, err := mocks.For(spec)
+	expect(err).To.Be.Nil()
+	expect(m).Not.To.Be.Nil()
+
+	expected, err := format.Source([]byte(`
+ package foo
+ 
+ type mockFoo struct {
+  FooCalled chan bool
+  FooInput struct {
+   foo chan (chan<- int)
+  }
+  FooOutput struct {
+   ret0 chan (<-chan int)
+  }
+ }
+ `))
+	expect(err).To.Be.Nil()
+
+	src := source(expect, "foo", []ast.Decl{m.Decl()}, nil)
+	expect(src).To.Equal(string(expected))
+}
+
 func TestMockConstructor(t *testing.T) {
 	expect := expect.New(t)
 
@@ -129,6 +160,34 @@ func TestMockConstructor(t *testing.T) {
 	expect(src).To.Equal(string(expected))
 }
 
+func TestMockConstructor_DirectionalChansGetParens(t *testing.T) {
+	expect := expect.New(t)
+
+	spec := typeSpec(expect, `
+ type Foo interface {
+  Foo(foo chan<- int) <-chan int
+ }
+ `)
+	m, err := mocks.For(spec)
+	expect(err).To.Be.Nil()
+	expect(m).Not.To.Be.Nil()
+
+	expected, err := format.Source([]byte(`
+ package foo
+ 
+ func newMockFoo() *mockFoo {
+  m := &mockFoo{}
+  m.FooCalled = make(chan bool, 200)
+  m.FooInput.foo = make(chan (chan<- int), 200)
+  m.FooOutput.ret0 = make(chan (<-chan int), 200)
+  return m
+ }
+ `))
+	expect(err).To.Be.Nil()
+
+	src := source(expect, "foo", []ast.Decl{m.Constructor(200)}, nil)
+	expect(src).To.Equal(string(expected))
+}
 func TestMockAst(t *testing.T) {
 	expect := expect.New(t)
 
