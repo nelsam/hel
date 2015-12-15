@@ -84,6 +84,12 @@ func (m Mock) Ast(chanSize int) []ast.Decl {
 }
 
 func (m Mock) makeChan(typ ast.Expr, size int) *ast.CallExpr {
+	if chanType, ok := typ.(*ast.ChanType); ok {
+		switch chanType.Dir {
+		case ast.SEND, ast.RECV:
+			typ = &ast.ParenExpr{X: chanType}
+		}
+	}
 	return &ast.CallExpr{
 		Fun: &ast.Ident{Name: "make"},
 		Args: []ast.Expr{
@@ -144,11 +150,20 @@ func (m Mock) constructorBody(chanSize int) []ast.Stmt {
 func (m Mock) chanStruct(list []*ast.Field) *ast.StructType {
 	typ := &ast.StructType{Fields: &ast.FieldList{}}
 	for _, f := range list {
+		chanValType := f.Type
+		if chanType, ok := chanValType.(*ast.ChanType); ok {
+			// Receive-only channels require parens, and it seems unfair to leave
+			// out send-only channels.
+			switch chanType.Dir {
+			case ast.SEND, ast.RECV:
+				chanValType = &ast.ParenExpr{X: chanType}
+			}
+		}
 		typ.Fields.List = append(typ.Fields.List, &ast.Field{
 			Names: f.Names,
 			Type: &ast.ChanType{
 				Dir:   ast.SEND | ast.RECV,
-				Value: f.Type,
+				Value: chanValType,
 			},
 		})
 	}
