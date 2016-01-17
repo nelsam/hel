@@ -123,7 +123,7 @@ func TestFilter(t *testing.T) {
 	expectNamesToMatch(expect, fooContainers[0].ExportedTypes(), "Foo", "FooBar", "BarFoo")
 }
 
-func TestAnonymousTypes(t *testing.T) {
+func TestAnonymousLocalTypes(t *testing.T) {
 	expect := expect.New(t)
 
 	mockGoDir := newMockGoDir()
@@ -157,6 +157,57 @@ func TestAnonymousTypes(t *testing.T) {
 	foo := inter.Methods.List[0]
 	expect(foo.Names[0].String()).To.Equal("Foo")
 	_, isFunc := foo.Type.(*ast.FuncType)
+	expect(isFunc).To.Be.Ok()
+}
+
+func TestAnonymousImportedTypes(t *testing.T) {
+	expect := expect.New(t)
+
+	mockGoDir := newMockGoDir()
+	mockGoDir.PathOutput.ret0 <- "/some/path"
+	mockGoDir.PackagesOutput.ret0 <- map[string]*ast.Package{
+		"bar": {
+			Name: "bar",
+			Files: map[string]*ast.File{
+				"foo.go": parse(expect, `
+
+    import "some/path/to/foo"
+
+    type Bar interface{
+        foo.Foo
+        Bar()
+    }`),
+			},
+		},
+	}
+
+	close(mockGoDir.ImportOutput.ret1)
+	mockGoDir.ImportOutput.ret0 <- &ast.Package{
+		Name: "foo",
+		Files: map[string]*ast.File{
+			"foo.go": parse(expect, `
+    type Foo interface {
+        Foo()
+    }`),
+		},
+	}
+
+	found := types.Load(mockGoDir)
+	expect(mockGoDir.ImportCalled).To.Have.Len(1)
+	expect(<-mockGoDir.ImportInput.path).To.Equal("some/path/to/foo")
+	expect(<-mockGoDir.ImportInput.pkg).To.Equal("foo")
+
+	expect(found).To.Have.Len(1)
+	typs := found[0].ExportedTypes()
+	expect(typs).To.Have.Len(1)
+
+	spec := typs[0]
+	expect(spec).Not.To.Be.Nil()
+	inter := spec.Type.(*ast.InterfaceType)
+	expect(inter.Methods.List).To.Have.Len(2)
+	read := inter.Methods.List[0]
+	expect(read.Names[0].String()).To.Equal("Foo")
+	_, isFunc := read.Type.(*ast.FuncType)
 	expect(isFunc).To.Be.Ok()
 }
 

@@ -30,4 +30,12 @@ func TestLoad(t *testing.T) {
 
 	dirs = packages.Load("github.com/nelsam/hel/...")
 	expect(dirs).To.Have.Len(4)
+
+	pkg, err := dirs[0].Import("path/filepath", "filepath")
+	expect(err).To.Be.Nil()
+	expect(pkg).Not.To.Be.Nil()
+
+	_, err = dirs[0].Import("path/filepath", "foo")
+	expect(err).Not.To.Be.Nil()
+	expect(err.Error()).To.Equal("Could not find package foo")
 }

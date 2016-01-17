@@ -11,7 +11,7 @@ import (
 type GoDir interface {
 	Path() string
 	Packages() map[string]*ast.Package
-	Import(pkg string) (*ast.Package, error)
+	Import(path, pkg string) (*ast.Package, error)
 }
 
 // A Dir is a type that represents a directory containing Go
@@ -85,7 +85,7 @@ func Load(goDirs ...GoDir) Dirs {
 				// Default for packages that don't have tests yet.
 				d.testPkg = name + "_test"
 			}
-			newTypes, testsFound := loadPkgTypeSpecs(pkg)
+			newTypes, testsFound := loadPkgTypeSpecs(pkg, dir)
 			if testsFound {
 				// This package already has test files, so this will
 				// always be the test package.
@@ -119,18 +119,18 @@ func (d Dirs) Filter(patterns ...string) (dirs Dirs) {
 	return dirs
 }
 
-func loadPkgTypeSpecs(pkg *ast.Package) (specs []*ast.TypeSpec, hasTests bool) {
+func loadPkgTypeSpecs(pkg *ast.Package, dir GoDir) (specs []*ast.TypeSpec, hasTests bool) {
 	for name, f := range pkg.Files {
 		if strings.HasSuffix(name, "_test.go") {
 			hasTests = true
 			continue
 		}
-		specs = append(specs, loadFileTypeSpecs(f)...)
+		specs = append(specs, loadFileTypeSpecs(f, dir)...)
 	}
 	return specs, hasTests
 }
 
-func loadFileTypeSpecs(f *ast.File) (specs []*ast.TypeSpec) {
+func loadFileTypeSpecs(f *ast.File, dir GoDir) (specs []*ast.TypeSpec) {
 	var inters []*ast.InterfaceType
 	for _, obj := range f.Scope.Objects {
 		spec, ok := obj.Decl.(*ast.TypeSpec)
@@ -144,17 +144,17 @@ func loadFileTypeSpecs(f *ast.File) (specs []*ast.TypeSpec) {
 		inters = append(inters, inter)
 		specs = append(specs, spec)
 	}
-	flattenAnon(inters, specs)
+	flattenAnon(inters, specs, f.Imports, dir)
 	return specs
 }
 
-func flattenAnon(inters []*ast.InterfaceType, withSpecs []*ast.TypeSpec) {
+func flattenAnon(inters []*ast.InterfaceType, withSpecs []*ast.TypeSpec, withImports []*ast.ImportSpec, dir GoDir) {
 	for _, inter := range inters {
-		flatten(inter, withSpecs)
+		flatten(inter, withSpecs, withImports, dir)
 	}
 }
 
-func flatten(inter *ast.InterfaceType, withSpecs []*ast.TypeSpec) {
+func flatten(inter *ast.InterfaceType, withSpecs []*ast.TypeSpec, withImports []*ast.ImportSpec, dir GoDir) {
 	if inter.Methods == nil {
 		return
 	}
@@ -164,15 +164,28 @@ func flatten(inter *ast.InterfaceType, withSpecs []*ast.TypeSpec) {
 		case *ast.FuncType:
 			methods = append(methods, method)
 		case *ast.Ident:
-			methods = append(methods, findAnonMethods(src, withSpecs)...)
+			methods = append(methods, findAnonMethods(src, withSpecs, withImports, dir)...)
 		case *ast.SelectorExpr:
-			panic("Cannot yet handle embedded imported interfaces")
+			importedTypes := findImportedTypes(src.X.(*ast.Ident), withImports, dir)
+			methods = append(methods, findAnonMethods(src.Sel, importedTypes, nil, dir)...)
 		}
 	}
 	inter.Methods.List = methods
 }
 
-func findAnonMethods(ident *ast.Ident, withSpecs []*ast.TypeSpec) []*ast.Field {
+func findImportedTypes(name *ast.Ident, withImports []*ast.ImportSpec, dir GoDir) []*ast.TypeSpec {
+	importName := name.String()
+	for _, imp := range withImports {
+		path := strings.Trim(imp.Path.Value, `"`)
+		if pkg, err := dir.Import(path, importName); err == nil {
+			typs, _ := loadPkgTypeSpecs(pkg, dir)
+			return typs
+		}
+	}
+	return nil
+}
+
+func findAnonMethods(ident *ast.Ident, withSpecs []*ast.TypeSpec, withImports []*ast.ImportSpec, dir GoDir) []*ast.Field {
 	var spec *ast.TypeSpec
 	for idx := range withSpecs {
 		if withSpecs[idx].Name.String() == ident.Name {
@@ -185,6 +198,6 @@ func findAnonMethods(ident *ast.Ident, withSpecs []*ast.TypeSpec) []*ast.Field {
 		panic(fmt.Errorf("Can't find anonymous type %s", ident.Name))
 	}
 	anon := spec.Type.(*ast.InterfaceType)
-	flatten(anon, withSpecs)
+	flatten(anon, withSpecs, withImports, dir)
 	return anon.Methods.List
 }

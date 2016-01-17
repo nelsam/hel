@@ -1,6 +1,7 @@
 package packages
 
 import (
+	"fmt"
 	"go/ast"
 	"go/build"
 	"go/parser"
@@ -28,6 +29,18 @@ type Dir struct {
 	path string
 }
 
+func Load(pkgPatterns ...string) (dirs []Dir) {
+	pkgPatterns = parsePatterns(pkgPatterns...)
+	for _, pkgPattern := range pkgPatterns {
+		pkg, err := build.Import(pkgPattern, cwd, build.AllowBinary)
+		if err != nil {
+			panic(err)
+		}
+		dirs = append(dirs, Dir{path: pkg.Dir})
+	}
+	return
+}
+
 func (d Dir) Path() string {
 	return d.path
 }
@@ -40,16 +53,12 @@ func (d Dir) Packages() map[string]*ast.Package {
 	return packages
 }
 
-func Load(pkgPatterns ...string) (dirs []Dir) {
-	pkgPatterns = parsePatterns(pkgPatterns...)
-	for _, pkgPattern := range pkgPatterns {
-		pkg, err := build.Import(pkgPattern, cwd, build.AllowBinary)
-		if err != nil {
-			panic(err)
-		}
-		dirs = append(dirs, Dir{path: pkg.Dir})
+func (d Dir) Import(path, pkg string) (*ast.Package, error) {
+	newDir := Load(path)[0]
+	if pkg, ok := newDir.Packages()[pkg]; ok {
+		return pkg, nil
 	}
-	return
+	return nil, fmt.Errorf("Could not find package %s", pkg)
 }
 
 func parsePatterns(pkgPatterns ...string) (packages []string) {
