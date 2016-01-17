@@ -125,31 +125,38 @@ func loadPkgTypeSpecs(pkg *ast.Package, dir GoDir) (specs []*ast.TypeSpec, hasTe
 			hasTests = true
 			continue
 		}
-		specs = append(specs, loadFileTypeSpecs(f, dir)...)
+		fileImports := f.Imports
+		fileSpecs := loadFileTypeSpecs(f)
+
+		// flattenAnon needs to be called for each file, but the
+		// withSpecs parameter needs *all* specs, from *all* files.
+		// So we defer the flatten call until all files are processed.
+		defer func() {
+			flattenAnon(fileSpecs, specs, fileImports, dir)
+		}()
+
+		specs = append(specs, fileSpecs...)
 	}
 	return specs, hasTests
 }
 
-func loadFileTypeSpecs(f *ast.File, dir GoDir) (specs []*ast.TypeSpec) {
-	var inters []*ast.InterfaceType
+func loadFileTypeSpecs(f *ast.File) (specs []*ast.TypeSpec) {
 	for _, obj := range f.Scope.Objects {
 		spec, ok := obj.Decl.(*ast.TypeSpec)
 		if !ok {
 			continue
 		}
-		inter, ok := spec.Type.(*ast.InterfaceType)
-		if !ok {
+		if _, ok := spec.Type.(*ast.InterfaceType); !ok {
 			continue
 		}
-		inters = append(inters, inter)
 		specs = append(specs, spec)
 	}
-	flattenAnon(inters, specs, f.Imports, dir)
 	return specs
 }
 
-func flattenAnon(inters []*ast.InterfaceType, withSpecs []*ast.TypeSpec, withImports []*ast.ImportSpec, dir GoDir) {
-	for _, inter := range inters {
+func flattenAnon(specs, withSpecs []*ast.TypeSpec, withImports []*ast.ImportSpec, dir GoDir) {
+	for _, spec := range specs {
+		inter := spec.Type.(*ast.InterfaceType)
 		flatten(inter, withSpecs, withImports, dir)
 	}
 }

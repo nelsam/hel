@@ -132,14 +132,14 @@ func TestAnonymousLocalTypes(t *testing.T) {
 		"foo": {
 			Name: "foo",
 			Files: map[string]*ast.File{
-				"foo.go": parse(expect, `
-    type Foo interface{
-        Foo()
-    }
-
+				"bar.go": parse(expect, `
     type Bar interface{
         Foo
         Bar()
+    }`),
+				"foo.go": parse(expect, `
+    type Foo interface{
+        Foo()
     }`),
 			},
 		},
