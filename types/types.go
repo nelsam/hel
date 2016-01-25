@@ -198,14 +198,17 @@ func addSelector(typs []*ast.TypeSpec, selector string) {
 	for _, typ := range typs {
 		inter := typ.Type.(*ast.InterfaceType)
 		for _, meth := range inter.Methods.List {
-			method := meth.Type.(*ast.FuncType)
-			if method.Params != nil {
-				addFieldSelectors(method.Params.List, selector)
-			}
-			if method.Results != nil {
-				addFieldSelectors(method.Results.List, selector)
-			}
+			addFuncSelectors(meth.Type.(*ast.FuncType), selector)
 		}
+	}
+}
+
+func addFuncSelectors(method *ast.FuncType, selector string) {
+	if method.Params != nil {
+		addFieldSelectors(method.Params.List, selector)
+	}
+	if method.Results != nil {
+		addFieldSelectors(method.Results.List, selector)
 	}
 }
 
@@ -228,8 +231,7 @@ func addFieldSelector(field *ast.Field, selector string) *ast.Field {
 			},
 		}
 	case *ast.FuncType:
-		addFieldSelectors(src.Params.List, selector)
-		addFieldSelectors(src.Results.List, selector)
+		addFuncSelectors(src, selector)
 	}
 	return field
 }
