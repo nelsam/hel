@@ -213,8 +213,8 @@ func TestAnonymousImportedTypes(t *testing.T) {
 	expect(f.Results.List).To.Have.Len(1)
 	expr, isSelector := f.Results.List[0].Type.(*ast.SelectorExpr)
 	expect(isSelector).To.Be.Ok()
-	expect(expr.Sel.String()).To.Equal("foo")
-	expect(expr.X.(*ast.Ident).String()).To.Equal("X")
+	expect(expr.X.(*ast.Ident).String()).To.Equal("foo")
+	expect(expr.Sel.String()).To.Equal("X")
 }
 
 func expectNamesToMatch(expect func(interface{}) *expect.Expect, list []*ast.TypeSpec, names ...string) {

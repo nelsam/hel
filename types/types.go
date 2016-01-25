@@ -225,8 +225,8 @@ func addFieldSelector(field *ast.Field, selector string) *ast.Field {
 	}
 	return &ast.Field{
 		Type: &ast.SelectorExpr{
-			Sel: &ast.Ident{Name: selector},
-			X:   ident,
+			X:   &ast.Ident{Name: selector},
+			Sel: ident,
 		},
 	}
 }
