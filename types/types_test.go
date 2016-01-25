@@ -187,7 +187,7 @@ func TestAnonymousImportedTypes(t *testing.T) {
 		Files: map[string]*ast.File{
 			"foo.go": parse(expect, `
     type Foo interface {
-        Foo()
+        Foo() X
     }`),
 		},
 	}
@@ -207,8 +207,14 @@ func TestAnonymousImportedTypes(t *testing.T) {
 	expect(inter.Methods.List).To.Have.Len(2)
 	read := inter.Methods.List[0]
 	expect(read.Names[0].String()).To.Equal("Foo")
-	_, isFunc := read.Type.(*ast.FuncType)
+	f, isFunc := read.Type.(*ast.FuncType)
 	expect(isFunc).To.Be.Ok()
+	expect(f.Params.List).To.Have.Len(0)
+	expect(f.Results.List).To.Have.Len(1)
+	expr, isSelector := f.Results.List[0].Type.(*ast.SelectorExpr)
+	expect(isSelector).To.Be.Ok()
+	expect(expr.Sel.String()).To.Equal("foo")
+	expect(expr.X.(*ast.Ident).String()).To.Equal("X")
 }
 
 func expectNamesToMatch(expect func(interface{}) *expect.Expect, list []*ast.TypeSpec, names ...string) {

@@ -5,6 +5,7 @@ import (
 	"go/ast"
 	"regexp"
 	"strings"
+	"unicode"
 )
 
 // A GoDir is a type that represents a directory of Go files.
@@ -186,10 +187,44 @@ func findImportedTypes(name *ast.Ident, withImports []*ast.ImportSpec, dir GoDir
 		path := strings.Trim(imp.Path.Value, `"`)
 		if pkg, err := dir.Import(path, importName); err == nil {
 			typs, _ := loadPkgTypeSpecs(pkg, dir)
+			addSelector(typs, importName)
 			return typs
 		}
 	}
 	return nil
+}
+
+func addSelector(typs []*ast.TypeSpec, selector string) {
+	for _, typ := range typs {
+		inter := typ.Type.(*ast.InterfaceType)
+		for _, meth := range inter.Methods.List {
+			method := meth.Type.(*ast.FuncType)
+			addFieldSelectors(method.Params.List, selector)
+			addFieldSelectors(method.Results.List, selector)
+		}
+	}
+}
+
+func addFieldSelectors(fields []*ast.Field, selector string) {
+	for idx, field := range fields {
+		fields[idx] = addFieldSelector(field, selector)
+	}
+}
+
+func addFieldSelector(field *ast.Field, selector string) *ast.Field {
+	ident, ok := field.Type.(*ast.Ident)
+	if !ok {
+		return field
+	}
+	if !unicode.IsUpper(rune(ident.String()[0])) {
+		return field
+	}
+	return &ast.Field{
+		Type: &ast.SelectorExpr{
+			Sel: &ast.Ident{Name: selector},
+			X:   ident,
+		},
+	}
 }
 
 func findAnonMethods(ident *ast.Ident, withSpecs []*ast.TypeSpec, withImports []*ast.ImportSpec, dir GoDir) []*ast.Field {
