@@ -187,7 +187,7 @@ func TestAnonymousImportedTypes(t *testing.T) {
 		Files: map[string]*ast.File{
 			"foo.go": parse(expect, `
     type Foo interface {
-        Foo() X
+        Foo(x X) Y
     }`),
 		},
 	}
@@ -205,16 +205,101 @@ func TestAnonymousImportedTypes(t *testing.T) {
 	expect(spec).Not.To.Be.Nil()
 	inter := spec.Type.(*ast.InterfaceType)
 	expect(inter.Methods.List).To.Have.Len(2)
-	read := inter.Methods.List[0]
-	expect(read.Names[0].String()).To.Equal("Foo")
-	f, isFunc := read.Type.(*ast.FuncType)
+
+	foo := inter.Methods.List[0]
+	expect(foo.Names[0].String()).To.Equal("Foo")
+	f, isFunc := foo.Type.(*ast.FuncType)
 	expect(isFunc).To.Be.Ok()
-	expect(f.Params.List).To.Have.Len(0)
+	expect(f.Params.List).To.Have.Len(1)
 	expect(f.Results.List).To.Have.Len(1)
-	expr, isSelector := f.Results.List[0].Type.(*ast.SelectorExpr)
+	expr, isSelector := f.Params.List[0].Type.(*ast.SelectorExpr)
 	expect(isSelector).To.Be.Ok()
 	expect(expr.X.(*ast.Ident).String()).To.Equal("foo")
 	expect(expr.Sel.String()).To.Equal("X")
+	expr, isSelector = f.Results.List[0].Type.(*ast.SelectorExpr)
+	expect(isSelector).To.Be.Ok()
+	expect(expr.X.(*ast.Ident).String()).To.Equal("foo")
+	expect(expr.Sel.String()).To.Equal("Y")
+}
+
+func TestAnonymousImportedTypes_Recursion(t *testing.T) {
+	expect := expect.New(t)
+
+	mockGoDir := newMockGoDir()
+	mockGoDir.PathOutput.ret0 <- "/some/path"
+	mockGoDir.PackagesOutput.ret0 <- map[string]*ast.Package{
+		"bar": {
+			Name: "bar",
+			Files: map[string]*ast.File{
+				"foo.go": parse(expect, `
+
+    import "some/path/to/foo"
+
+    type Bar interface{
+        foo.Foo
+        Bar()
+    }`),
+			},
+		},
+	}
+
+	close(mockGoDir.ImportOutput.ret1)
+	mockGoDir.ImportOutput.ret0 <- &ast.Package{
+		Name: "foo",
+		Files: map[string]*ast.File{
+			"foo.go": parse(expect, `
+    type Foo interface {
+        Foo(func(X) Y) func(Y) X
+    }`),
+		},
+	}
+
+	found := types.Load(mockGoDir)
+	expect(mockGoDir.ImportCalled).To.Have.Len(1)
+	expect(<-mockGoDir.ImportInput.path).To.Equal("some/path/to/foo")
+	expect(<-mockGoDir.ImportInput.pkg).To.Equal("foo")
+
+	expect(found).To.Have.Len(1)
+	typs := found[0].ExportedTypes()
+	expect(typs).To.Have.Len(1)
+
+	spec := typs[0]
+	expect(spec).Not.To.Be.Nil()
+	inter := spec.Type.(*ast.InterfaceType)
+	expect(inter.Methods.List).To.Have.Len(2)
+
+	foo := inter.Methods.List[0]
+	expect(foo.Names[0].String()).To.Equal("Foo")
+	f, isFunc := foo.Type.(*ast.FuncType)
+	expect(isFunc).To.Be.Ok()
+	expect(f.Params.List).To.Have.Len(1)
+	expect(f.Results.List).To.Have.Len(1)
+
+	input := f.Params.List[0]
+	in, isFunc := input.Type.(*ast.FuncType)
+	expect(isFunc).To.Be.Ok()
+
+	expr, isSelector := in.Params.List[0].Type.(*ast.SelectorExpr)
+	expect(isSelector).To.Be.Ok()
+	expect(expr.X.(*ast.Ident).String()).To.Equal("foo")
+	expect(expr.Sel.String()).To.Equal("X")
+	expr, isSelector = in.Results.List[0].Type.(*ast.SelectorExpr)
+	expect(isSelector).To.Be.Ok()
+	expect(expr.X.(*ast.Ident).String()).To.Equal("foo")
+	expect(expr.Sel.String()).To.Equal("Y")
+
+	output := f.Params.List[0]
+	out, isFunc := output.Type.(*ast.FuncType)
+	expect(isFunc).To.Be.Ok()
+
+	expr, isSelector = out.Params.List[0].Type.(*ast.SelectorExpr)
+	expect(isSelector).To.Be.Ok()
+	expect(expr.X.(*ast.Ident).String()).To.Equal("foo")
+	expect(expr.Sel.String()).To.Equal("X")
+	expr, isSelector = out.Results.List[0].Type.(*ast.SelectorExpr)
+	expect(isSelector).To.Be.Ok()
+	expect(expr.X.(*ast.Ident).String()).To.Equal("foo")
+	expect(expr.Sel.String()).To.Equal("Y")
 }
 
 func expectNamesToMatch(expect func(interface{}) *expect.Expect, list []*ast.TypeSpec, names ...string) {

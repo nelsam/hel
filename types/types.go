@@ -216,19 +216,22 @@ func addFieldSelectors(fields []*ast.Field, selector string) {
 }
 
 func addFieldSelector(field *ast.Field, selector string) *ast.Field {
-	ident, ok := field.Type.(*ast.Ident)
-	if !ok {
-		return field
+	switch src := field.Type.(type) {
+	case *ast.Ident:
+		if !unicode.IsUpper(rune(src.String()[0])) {
+			return field
+		}
+		return &ast.Field{
+			Type: &ast.SelectorExpr{
+				X:   &ast.Ident{Name: selector},
+				Sel: src,
+			},
+		}
+	case *ast.FuncType:
+		addFieldSelectors(src.Params.List, selector)
+		addFieldSelectors(src.Results.List, selector)
 	}
-	if !unicode.IsUpper(rune(ident.String()[0])) {
-		return field
-	}
-	return &ast.Field{
-		Type: &ast.SelectorExpr{
-			X:   &ast.Ident{Name: selector},
-			Sel: ident,
-		},
-	}
+	return field
 }
 
 func findAnonMethods(ident *ast.Ident, withSpecs []*ast.TypeSpec, withImports []*ast.ImportSpec, dir GoDir) []*ast.Field {
