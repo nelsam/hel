@@ -199,8 +199,12 @@ func addSelector(typs []*ast.TypeSpec, selector string) {
 		inter := typ.Type.(*ast.InterfaceType)
 		for _, meth := range inter.Methods.List {
 			method := meth.Type.(*ast.FuncType)
-			addFieldSelectors(method.Params.List, selector)
-			addFieldSelectors(method.Results.List, selector)
+			if method.Params != nil {
+				addFieldSelectors(method.Params.List, selector)
+			}
+			if method.Results != nil {
+				addFieldSelectors(method.Results.List, selector)
+			}
 		}
 	}
 }
