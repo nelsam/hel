@@ -29,6 +29,12 @@ func (m Mocks) PrependLocalPackage(name string) {
 	}
 }
 
+func (m Mocks) SetBlockingReturn(blockingReturn bool) {
+	for _, m := range m {
+		m.SetBlockingReturn(blockingReturn)
+	}
+}
+
 func (m Mocks) decls(chanSize int) (decls []ast.Decl) {
 	for _, mock := range m {
 		decls = append(decls, mock.Ast(chanSize)...)

@@ -71,7 +71,17 @@ func (m Method) params() []*ast.Field {
 
 func (m Method) results() []*ast.Field {
 	if m.implements.Results == nil {
-		return nil
+		if !*m.receiver.blockingReturn {
+			return nil
+		}
+		return []*ast.Field{
+			{
+				Names: []*ast.Ident{
+					{Name: "blockReturn"},
+				},
+				Type: &ast.Ident{Name: "bool"},
+			},
+		}
 	}
 	fields := make([]*ast.Field, 0, len(m.implements.Results.List))
 	for idx, f := range m.implements.Results.List {
@@ -134,7 +144,10 @@ func (m Method) returnsExprs() (exprs []ast.Expr) {
 
 func (m Method) returns() ast.Stmt {
 	if m.implements.Results == nil {
-		return nil
+		if !*m.receiver.blockingReturn {
+			return nil
+		}
+		return &ast.ExprStmt{X: m.returnsExprs()[0]}
 	}
 	return &ast.ReturnStmt{Results: m.returnsExprs()}
 }

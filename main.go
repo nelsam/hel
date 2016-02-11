@@ -61,6 +61,10 @@ func init() {
 			if err != nil {
 				panic(err)
 			}
+			blockingReturn, err := cmd.Flags().GetBool("blocking-return")
+			if err != nil {
+				panic(err)
+			}
 			fmt.Printf("Loading directories matching pattern"+pluralize(packagePatterns, "", "s")+" %v", packagePatterns)
 			var dirList []packages.Dir
 			progress(func() {
@@ -87,7 +91,7 @@ func init() {
 			fmt.Printf("Generating mocks in output file %s", outputName)
 			progress(func() {
 				for _, typeDir := range typeDirs {
-					mockPath, err := makeMocks(typeDir, outputName, chanSize)
+					mockPath, err := makeMocks(typeDir, outputName, chanSize, blockingReturn)
 					if err != nil {
 						panic(err)
 					}
@@ -108,9 +112,10 @@ func init() {
 		"not generate exported types, this file will be saved directly in all packages with generated mocks.  "+
 		"Also note that, since the types are not exported, you will want the file to end in '_test.go'.")
 	cmd.Flags().IntP("chan-size", "s", 100, "The size of channels used for method calls.")
+	cmd.Flags().BoolP("blocking-return", "b", false, "Always block when returning from mock even if there is no return value.")
 }
 
-func makeMocks(types types.Dir, fileName string, chanSize int) (filePath string, err error) {
+func makeMocks(types types.Dir, fileName string, chanSize int, blockingReturn bool) (filePath string, err error) {
 	mocks, err := mocks.Generate(types)
 	if err != nil {
 		return "", err
@@ -118,6 +123,7 @@ func makeMocks(types types.Dir, fileName string, chanSize int) (filePath string,
 	if len(mocks) == 0 {
 		return "", nil
 	}
+	mocks.SetBlockingReturn(blockingReturn)
 	if types.Package() != types.TestPackage() {
 		mocks.PrependLocalPackage(types.Package())
 	}
