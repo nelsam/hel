@@ -44,21 +44,21 @@ func TestMockTypeDecl(t *testing.T) {
 
 	expected, err := format.Source([]byte(`
  package foo
- 
+
  type mockFoo struct {
   FooCalled chan bool
   FooInput struct {
-   foo chan string
+   Foo chan string
   }
   FooOutput struct {
-   ret0 chan int
-  }  
+   Ret0 chan int
+  }
   BarCalled chan bool
   BarInput struct {
-   bar chan int
+   Bar chan int
   }
   BarOutput struct {
-   ret0 chan Foo
+   Ret0 chan Foo
   }
   BazCalled chan bool
  }
@@ -72,21 +72,21 @@ func TestMockTypeDecl(t *testing.T) {
 
 	expected, err = format.Source([]byte(`
  package foo
- 
+
  type mockFoo struct {
   FooCalled chan bool
   FooInput struct {
-   foo chan string
+   Foo chan string
   }
   FooOutput struct {
-   ret0 chan int
+   Ret0 chan int
   }
   BarCalled chan bool
   BarInput struct {
-   bar chan int
+   Bar chan int
   }
   BarOutput struct {
-   ret0 chan foo.Foo
+   Ret0 chan foo.Foo
   }
   BazCalled chan bool
  }
@@ -111,14 +111,14 @@ func TestMockTypeDecl_DirectionalChansGetParens(t *testing.T) {
 
 	expected, err := format.Source([]byte(`
  package foo
- 
+
  type mockFoo struct {
   FooCalled chan bool
   FooInput struct {
-   foo chan (chan<- int)
+   Foo chan (chan<- int)
   }
   FooOutput struct {
-   ret0 chan (<-chan int)
+   Ret0 chan (<-chan int)
   }
  }
  `))
@@ -143,15 +143,15 @@ func TestMockConstructor(t *testing.T) {
 
 	expected, err := format.Source([]byte(`
  package foo
- 
+
  func newMockFoo() *mockFoo {
   m := &mockFoo{}
   m.FooCalled = make(chan bool, 300)
-  m.FooInput.foo = make(chan string, 300)
-  m.FooOutput.ret0 = make(chan int, 300)
+  m.FooInput.Foo = make(chan string, 300)
+  m.FooOutput.Ret0 = make(chan int, 300)
   m.BarCalled = make(chan bool, 300)
-  m.BarInput.bar = make(chan int, 300)
-  m.BarOutput.ret0 = make(chan string, 300)
+  m.BarInput.Bar = make(chan int, 300)
+  m.BarOutput.Ret0 = make(chan string, 300)
   return m
  }`))
 	expect(err).To.Be.Nil()
@@ -174,12 +174,12 @@ func TestMockConstructor_DirectionalChansGetParens(t *testing.T) {
 
 	expected, err := format.Source([]byte(`
  package foo
- 
+
  func newMockFoo() *mockFoo {
   m := &mockFoo{}
   m.FooCalled = make(chan bool, 200)
-  m.FooInput.foo = make(chan (chan<- int), 200)
-  m.FooOutput.ret0 = make(chan (<-chan int), 200)
+  m.FooInput.Foo = make(chan (chan<- int), 200)
+  m.FooOutput.Ret0 = make(chan (<-chan int), 200)
   return m
  }
  `))
@@ -188,6 +188,7 @@ func TestMockConstructor_DirectionalChansGetParens(t *testing.T) {
 	src := source(expect, "foo", []ast.Decl{m.Constructor(200)}, nil)
 	expect(src).To.Equal(string(expected))
 }
+
 func TestMockAst(t *testing.T) {
 	expect := expect.New(t)
 

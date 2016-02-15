@@ -22,7 +22,7 @@ func TestMockSimpleMethod(t *testing.T) {
 
 	expected, err := format.Source([]byte(`
  package foo
- 
+
  func (m *mockFoo) Foo() {
    m.FooCalled <- true
  }`))
@@ -45,12 +45,12 @@ func TestMockMethodParams(t *testing.T) {
 
 	expected, err := format.Source([]byte(`
  package foo
- 
+
  func (m *mockFoo) Foo(foo, bar string, baz int) {
    m.FooCalled <- true
-   m.FooInput.foo <- foo
-   m.FooInput.bar <- bar
-   m.FooInput.baz <- baz
+   m.FooInput.Foo <- foo
+   m.FooInput.Bar <- bar
+   m.FooInput.Baz <- baz
  }`))
 	expect(err).To.Be.Nil()
 
@@ -71,10 +71,10 @@ func TestMockMethodReturns(t *testing.T) {
 
 	expected, err := format.Source([]byte(`
  package foo
- 
+
  func (m *mockFoo) Foo() (foo, bar string, baz int) {
    m.FooCalled <- true
-   return <-m.FooOutput.foo, <-m.FooOutput.bar, <-m.FooOutput.baz
+   return <-m.FooOutput.Foo, <-m.FooOutput.Bar, <-m.FooOutput.Baz
  }`))
 	expect(err).To.Be.Nil()
 
@@ -95,12 +95,12 @@ func TestMockMethodUnnamedValues(t *testing.T) {
 
 	expected, err := format.Source([]byte(`
  package foo
- 
+
  func (m *mockFoo) Foo(arg0 int, arg1 string) (string, error) {
    m.FooCalled <- true
-   m.FooInput.arg0 <- arg0
-   m.FooInput.arg1 <- arg1
-   return <-m.FooOutput.ret0, <-m.FooOutput.ret1
+   m.FooInput.Arg0 <- arg0
+   m.FooInput.Arg1 <- arg1
+   return <-m.FooOutput.Ret0, <-m.FooOutput.Ret1
  }`))
 	expect(err).To.Be.Nil()
 
@@ -121,12 +121,12 @@ func TestMockMethodLocalTypes(t *testing.T) {
 
 	expected, err := format.Source([]byte(`
  package foo
- 
+
  func (m *mockFoo) Foo(bar bar.Bar, baz string) (Foo, error) {
    m.FooCalled <- true
-   m.FooInput.bar <- bar
-   m.FooInput.baz <- baz
-   return <-m.FooOutput.ret0, <-m.FooOutput.ret1
+   m.FooInput.Bar <- bar
+   m.FooInput.Baz <- baz
+   return <-m.FooOutput.Ret0, <-m.FooOutput.Ret1
  }`))
 	expect(err).To.Be.Nil()
 
@@ -137,12 +137,12 @@ func TestMockMethodLocalTypes(t *testing.T) {
 
 	expected, err = format.Source([]byte(`
  package foo
- 
+
  func (m *mockFoo) Foo(bar bar.Bar, baz string) (foo.Foo, error) {
    m.FooCalled <- true
-   m.FooInput.bar <- bar
-   m.FooInput.baz <- baz
-   return <-m.FooOutput.ret0, <-m.FooOutput.ret1
+   m.FooInput.Bar <- bar
+   m.FooInput.Baz <- baz
+   return <-m.FooOutput.Ret0, <-m.FooOutput.Ret1
  }`))
 	expect(err).To.Be.Nil()
 

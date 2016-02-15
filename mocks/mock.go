@@ -111,7 +111,7 @@ func (m Mock) typeChanInit(fieldName string, fields []*ast.Field, chanSize int) 
 	for _, field := range fields {
 		for _, name := range field.Names {
 			inputInits = append(inputInits, &ast.AssignStmt{
-				Lhs: []ast.Expr{selectors("m", fieldName, name.String())},
+				Lhs: []ast.Expr{selectors("m", fieldName, strings.Title(name.String()))},
 				Tok: token.ASSIGN,
 				Rhs: []ast.Expr{m.makeChan(field.Type, chanSize)},
 			})
@@ -159,8 +159,17 @@ func (m Mock) chanStruct(list []*ast.Field) *ast.StructType {
 				chanValType = &ast.ParenExpr{X: chanType}
 			}
 		}
+		names := make([]*ast.Ident, 0, len(f.Names))
+		for i, name := range f.Names {
+			newName := &ast.Ident{}
+			*newName = *name
+			names = append(names, newName)
+			if i == len(f.Names)-1 {
+				newName.Name = strings.Title(newName.Name)
+			}
+		}
 		typ.Fields.List = append(typ.Fields.List, &ast.Field{
-			Names: f.Names,
+			Names: names,
 			Type: &ast.ChanType{
 				Dir:   ast.SEND | ast.RECV,
 				Value: chanValType,
