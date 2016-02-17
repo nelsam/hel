@@ -128,6 +128,34 @@ func TestMockTypeDecl_DirectionalChansGetParens(t *testing.T) {
 	expect(src).To.Equal(string(expected))
 }
 
+func TestMockTypeDecl_VariadicMethods(t *testing.T) {
+	expect := expect.New(t)
+
+	spec := typeSpec(expect, `
+type Foo interface {
+ Foo(foo ...int)
+}
+`)
+	m, err := mocks.For(spec)
+	expect(err).To.Be.Nil()
+	expect(m).Not.To.Be.Nil()
+
+	expected, err := format.Source([]byte(`
+ package foo
+
+ type mockFoo struct {
+  FooCalled chan bool
+  FooInput struct {
+   Foo chan []int
+  }
+ }
+ `))
+	expect(err).To.Be.Nil()
+
+	src := source(expect, "foo", []ast.Decl{m.Decl()}, nil)
+	expect(src).To.Equal(string(expected))
+}
+
 func TestMockConstructor(t *testing.T) {
 	expect := expect.New(t)
 
@@ -180,6 +208,34 @@ func TestMockConstructor_DirectionalChansGetParens(t *testing.T) {
   m.FooCalled = make(chan bool, 200)
   m.FooInput.Foo = make(chan (chan<- int), 200)
   m.FooOutput.Ret0 = make(chan (<-chan int), 200)
+  return m
+ }
+ `))
+	expect(err).To.Be.Nil()
+
+	src := source(expect, "foo", []ast.Decl{m.Constructor(200)}, nil)
+	expect(src).To.Equal(string(expected))
+}
+
+func TestMockConstructor_VariadicParams(t *testing.T) {
+	expect := expect.New(t)
+
+	spec := typeSpec(expect, `
+ type Foo interface {
+  Foo(foo ...int)
+ }
+ `)
+	m, err := mocks.For(spec)
+	expect(err).To.Be.Nil()
+	expect(m).Not.To.Be.Nil()
+
+	expected, err := format.Source([]byte(`
+ package foo
+
+ func newMockFoo() *mockFoo {
+  m := &mockFoo{}
+  m.FooCalled = make(chan bool, 200)
+  m.FooInput.Foo = make(chan []int, 200)
   return m
  }
  `))

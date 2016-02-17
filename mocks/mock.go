@@ -84,11 +84,15 @@ func (m Mock) Ast(chanSize int) []ast.Decl {
 }
 
 func (m Mock) makeChan(typ ast.Expr, size int) *ast.CallExpr {
-	if chanType, ok := typ.(*ast.ChanType); ok {
-		switch chanType.Dir {
+	switch src := typ.(type) {
+	case *ast.ChanType:
+		switch src.Dir {
 		case ast.SEND, ast.RECV:
-			typ = &ast.ParenExpr{X: chanType}
+			typ = &ast.ParenExpr{X: src}
 		}
+	case *ast.Ellipsis:
+		// The actual value of variadic types is a slice
+		typ = &ast.ArrayType{Elt: src.Elt}
 	}
 	return &ast.CallExpr{
 		Fun: &ast.Ident{Name: "make"},
@@ -151,13 +155,17 @@ func (m Mock) chanStruct(list []*ast.Field) *ast.StructType {
 	typ := &ast.StructType{Fields: &ast.FieldList{}}
 	for _, f := range list {
 		chanValType := f.Type
-		if chanType, ok := chanValType.(*ast.ChanType); ok {
+		switch src := chanValType.(type) {
+		case *ast.ChanType:
 			// Receive-only channels require parens, and it seems unfair to leave
 			// out send-only channels.
-			switch chanType.Dir {
+			switch src.Dir {
 			case ast.SEND, ast.RECV:
-				chanValType = &ast.ParenExpr{X: chanType}
+				chanValType = &ast.ParenExpr{X: src}
 			}
+		case *ast.Ellipsis:
+			// The actual value of variadic types is a slice
+			chanValType = &ast.ArrayType{Elt: src.Elt}
 		}
 		names := make([]*ast.Ident, 0, len(f.Names))
 		for i, name := range f.Names {
