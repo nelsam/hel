@@ -156,6 +156,34 @@ type Foo interface {
 	expect(src).To.Equal(string(expected))
 }
 
+func TestMockTypeDecl_ParamsWithoutTypes(t *testing.T) {
+	expect := expect.New(t)
+
+	spec := typeSpec(expect, `
+type Foo interface {
+ Foo(foo, bar string)
+}
+`)
+	m, err := mocks.For(spec)
+	expect(err).To.Be.Nil()
+	expect(m).Not.To.Be.Nil()
+
+	expected, err := format.Source([]byte(`
+package foo
+
+type mockFoo struct {
+ FooCalled chan bool
+ FooInput struct {
+  Foo, Bar chan string
+ }
+}
+`))
+	expect(err).To.Be.Nil()
+
+	src := source(expect, "foo", []ast.Decl{m.Decl()}, nil)
+	expect(src).To.Equal(string(expected))
+}
+
 func TestMockConstructor(t *testing.T) {
 	expect := expect.New(t)
 

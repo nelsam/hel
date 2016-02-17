@@ -168,13 +168,11 @@ func (m Mock) chanStruct(list []*ast.Field) *ast.StructType {
 			chanValType = &ast.ArrayType{Elt: src.Elt}
 		}
 		names := make([]*ast.Ident, 0, len(f.Names))
-		for i, name := range f.Names {
+		for _, name := range f.Names {
 			newName := &ast.Ident{}
 			*newName = *name
 			names = append(names, newName)
-			if i == len(f.Names)-1 {
-				newName.Name = strings.Title(newName.Name)
-			}
+			newName.Name = strings.Title(newName.Name)
 		}
 		typ.Fields.List = append(typ.Fields.List, &ast.Field{
 			Names: names,
