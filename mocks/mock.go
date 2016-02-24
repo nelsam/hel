@@ -10,8 +10,9 @@ import (
 )
 
 type Mock struct {
-	typeName   string
-	implements *ast.InterfaceType
+	typeName       string
+	implements     *ast.InterfaceType
+	blockingReturn *bool
 }
 
 func For(typ *ast.TypeSpec) (Mock, error) {
@@ -19,9 +20,11 @@ func For(typ *ast.TypeSpec) (Mock, error) {
 	if !ok {
 		return Mock{}, fmt.Errorf("TypeSpec.Type expected to be *ast.InterfaceType, was %T", typ.Type)
 	}
+	var blockingReturn bool
 	m := Mock{
-		typeName:   typ.Name.String(),
-		implements: inter,
+		typeName:       typ.Name.String(),
+		implements:     inter,
+		blockingReturn: &blockingReturn,
 	}
 	return m, nil
 }
@@ -44,6 +47,10 @@ func (m Mock) PrependLocalPackage(name string) {
 	for _, m := range m.Methods() {
 		m.PrependLocalPackage(name)
 	}
+}
+
+func (m Mock) SetBlockingReturn(blockingReturn bool) {
+	*m.blockingReturn = blockingReturn
 }
 
 func (m Mock) Constructor(chanSize int) *ast.FuncDecl {

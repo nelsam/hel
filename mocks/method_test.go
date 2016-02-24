@@ -82,6 +82,31 @@ func TestMockMethodReturns(t *testing.T) {
 	expect(src).To.Equal(string(expected))
 }
 
+func TestMockMethodWithBlockingReturn(t *testing.T) {
+	expect := expect.New(t)
+
+	spec := typeSpec(expect, `
+ type Foo interface {
+   Foo()
+ }`)
+	mock, err := mocks.For(spec)
+	expect(err).To.Be.Nil()
+	mock.SetBlockingReturn(true)
+	method := mocks.MethodFor(mock, "Foo", method(expect, spec))
+
+	expected, err := format.Source([]byte(`
+ package foo
+ 
+ func (m *mockFoo) Foo() () {
+   m.FooCalled <- true
+   <-m.FooOutput.blockReturn
+ }`))
+	expect(err).To.Be.Nil()
+
+	src := source(expect, "foo", []ast.Decl{method.Ast()}, nil)
+	expect(src).To.Equal(string(expected))
+}
+
 func TestMockMethodUnnamedValues(t *testing.T) {
 	expect := expect.New(t)
 
