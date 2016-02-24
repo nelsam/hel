@@ -96,10 +96,10 @@ func TestMockMethodWithBlockingReturn(t *testing.T) {
 
 	expected, err := format.Source([]byte(`
  package foo
- 
+
  func (m *mockFoo) Foo() () {
    m.FooCalled <- true
-   <-m.FooOutput.blockReturn
+   <-m.FooOutput.BlockReturn
  }`))
 	expect(err).To.Be.Nil()
 
