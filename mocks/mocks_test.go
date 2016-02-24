@@ -173,56 +173,56 @@ func TestOutput(t *testing.T) {
 
 	expected, err = format.Source([]byte(`
  package foo_test
- 
+
  type mockFoo struct {
   BarCalled chan bool
   BarOutput struct {
-   ret0 chan int
+   Ret0 chan int
   }
  }
- 
+
  func newMockFoo() *mockFoo {
   m := &mockFoo{}
   m.BarCalled = make(chan bool, 100)
-  m.BarOutput.ret0 = make(chan int, 100)
+  m.BarOutput.Ret0 = make(chan int, 100)
   return m
- } 
+ }
  func (m *mockFoo) Bar() int {
   m.BarCalled <- true
-  return <-m.BarOutput.ret0
+  return <-m.BarOutput.Ret0
  }
- 
+
  type mockBar struct {
   FooCalled chan bool
   FooInput struct {
-   foo chan string
+   Foo chan string
   }
   FooOutput struct {
-   ret0 chan foo.Foo
+   Ret0 chan foo.Foo
   }
   BazCalled chan bool
   BazOutput struct {
-   blockReturn chan bool
+   BlockReturn chan bool
   }
  }
- 
+
  func newMockBar() *mockBar {
   m := &mockBar{}
   m.FooCalled = make(chan bool, 100)
-  m.FooInput.foo = make(chan string, 100)
-  m.FooOutput.ret0 = make(chan foo.Foo, 100)
+  m.FooInput.Foo = make(chan string, 100)
+  m.FooOutput.Ret0 = make(chan foo.Foo, 100)
   m.BazCalled = make(chan bool, 100)
-  m.BazOutput.blockReturn = make(chan bool, 100)
+  m.BazOutput.BlockReturn = make(chan bool, 100)
   return m
  }
  func (m *mockBar) Foo(foo string) foo.Foo {
   m.FooCalled <- true
-  m.FooInput.foo <- foo
-  return <-m.FooOutput.ret0
- } 
+  m.FooInput.Foo <- foo
+  return <-m.FooOutput.Ret0
+ }
  func (m *mockBar) Baz() {
   m.BazCalled <- true
-  <-m.BazOutput.blockReturn
+  <-m.BazOutput.BlockReturn
  }
  `))
 	expect(err).To.Be.Nil()

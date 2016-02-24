@@ -100,25 +100,25 @@ func TestMockTypeDecl(t *testing.T) {
 
 	expected, err = format.Source([]byte(`
  package foo
- 
+
  type mockFoo struct {
   FooCalled chan bool
   FooInput struct {
-   foo chan string
+   Foo chan string
   }
   FooOutput struct {
-   ret0 chan int
+   Ret0 chan int
   }
   BarCalled chan bool
   BarInput struct {
-   bar chan int
+   Bar chan int
   }
   BarOutput struct {
-   ret0 chan foo.Foo
+   Ret0 chan foo.Foo
   }
   BazCalled chan bool
   BazOutput struct {
-   blockReturn chan bool
+   BlockReturn chan bool
   }
  }
  `))
