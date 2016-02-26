@@ -81,6 +81,12 @@ func (m Method) results() []*ast.Field {
 				},
 				Type: &ast.Ident{Name: "bool"},
 			},
+			{
+				Names: []*ast.Ident{
+					{Name: "unblockReturn"},
+				},
+				Type: &ast.Ident{Name: "bool"},
+			},
 		}
 	}
 	fields := make([]*ast.Field, 0, len(m.implements.Results.List))
@@ -147,9 +153,21 @@ func (m Method) returns() ast.Stmt {
 		if !*m.receiver.blockingReturn {
 			return nil
 		}
-		return &ast.ExprStmt{X: m.returnsExprs()[0]}
+		return m.blockingReturn()
 	}
 	return &ast.ReturnStmt{Results: m.returnsExprs()}
+}
+
+func (m Method) blockingReturn() *ast.SelectStmt {
+	blockingCase := &ast.CommClause{
+		Comm: &ast.ExprStmt{X: m.returnsExprs()[0]},
+		Body: []ast.Stmt{ &ast.ExprStmt{ X: m.returnsExprs()[1] } },
+	}
+	return &ast.SelectStmt {
+		Body: &ast.BlockStmt{
+			List: []ast.Stmt{ blockingCase, &ast.CommClause{} },
+		},
+	}
 }
 
 func (m Method) body() *ast.BlockStmt {

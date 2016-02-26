@@ -203,6 +203,7 @@ func TestOutput(t *testing.T) {
   BazCalled chan bool
   BazOutput struct {
    BlockReturn chan bool
+   UnblockReturn chan bool
   }
  }
 
@@ -213,6 +214,7 @@ func TestOutput(t *testing.T) {
   m.FooOutput.Ret0 = make(chan foo.Foo, 100)
   m.BazCalled = make(chan bool, 100)
   m.BazOutput.BlockReturn = make(chan bool, 100)
+  m.BazOutput.UnblockReturn = make(chan bool, 100)
   return m
  }
  func (m *mockBar) Foo(foo string) foo.Foo {
@@ -222,7 +224,11 @@ func TestOutput(t *testing.T) {
  }
  func (m *mockBar) Baz() {
   m.BazCalled <- true
-  <-m.BazOutput.BlockReturn
+  select {
+  case <-m.BazOutput.BlockReturn:
+      <-m.BazOutput.UnblockReturn
+  default:
+  }
  }
  `))
 	expect(err).To.Be.Nil()

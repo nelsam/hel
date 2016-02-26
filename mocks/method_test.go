@@ -99,7 +99,11 @@ func TestMockMethodWithBlockingReturn(t *testing.T) {
 
  func (m *mockFoo) Foo() () {
    m.FooCalled <- true
-   <-m.FooOutput.BlockReturn
+   select {
+   case <-m.FooOutput.BlockReturn:
+       <-m.FooOutput.UnblockReturn
+   default:
+   }
  }`))
 	expect(err).To.Be.Nil()
 
