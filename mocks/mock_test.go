@@ -119,6 +119,7 @@ func TestMockTypeDecl(t *testing.T) {
   BazCalled chan bool
   BazOutput struct {
    BlockReturn chan bool
+   UnblockReturn chan bool
   }
  }
  `))
