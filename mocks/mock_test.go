@@ -135,6 +135,13 @@ func TestMockTypeDecl(t *testing.T) {
   BazOutput struct {
    BlockReturn chan bool
   }
+  BaconCalled chan bool
+  BaconInput struct {
+    Arg0 chan func(foo.Eggs) foo.Eggs
+  }
+  BaconOutput struct {
+    Ret0 chan func(foo.Eggs) foo.Eggs
+  }
  }
  `))
 	expect(err).To.Be.Nil()

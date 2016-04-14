@@ -235,6 +235,13 @@ func TestOutput(t *testing.T) {
   BazOutput struct {
    BlockReturn chan bool
   }
+  BaconCalled chan bool
+  BaconInput struct {
+    Arg0 chan func(foo.Eggs) foo.Eggs
+  }
+  BaconOutput struct {
+    Ret0 chan func(foo.Eggs) foo.Eggs
+  }
  }
 
  func newMockBar() *mockBar {
@@ -244,6 +251,9 @@ func TestOutput(t *testing.T) {
   m.FooOutput.Ret0 = make(chan foo.Foo, 100)
   m.BazCalled = make(chan bool, 100)
   m.BazOutput.BlockReturn = make(chan bool, 100)
+  m.BaconCalled = make(chan bool, 100)
+  m.BaconInput.Arg0 = make(chan func(foo.Eggs) foo.Eggs, 100)
+  m.BaconOutput.Ret0 = make(chan func(foo.Eggs) foo.Eggs, 100)
   return m
  }
  func (m *mockBar) Foo(foo string) foo.Foo {
@@ -254,6 +264,11 @@ func TestOutput(t *testing.T) {
  func (m *mockBar) Baz() {
   m.BazCalled <- true
   <-m.BazOutput.BlockReturn
+ }
+ func (m *mockBar) Bacon(arg0 func(foo.Eggs) foo.Eggs) func(foo.Eggs) foo.Eggs {
+  m.BaconCalled <- true
+  m.BaconInput.Arg0 <- arg0
+  return <-m.BaconOutput.Ret0
  }
  `))
 	expect(err).To.Be.Nil()
