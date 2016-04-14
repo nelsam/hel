@@ -36,6 +36,7 @@ func TestMockTypeDecl(t *testing.T) {
   Foo(foo string) int
   Bar(bar int) Foo
   Baz()
+  Bacon(func(Eggs) Eggs) func(Eggs) Eggs
  }
  `)
 	m, err := mocks.For(spec)
@@ -61,6 +62,13 @@ func TestMockTypeDecl(t *testing.T) {
    Ret0 chan Foo
   }
   BazCalled chan bool
+  BaconCalled chan bool
+  BaconInput struct {
+    Arg0 chan func(Eggs) Eggs
+  }
+  BaconOutput struct {
+    Ret0 chan func(Eggs) Eggs
+  }
  }
  `))
 	expect(err).To.Be.Nil()
@@ -89,6 +97,13 @@ func TestMockTypeDecl(t *testing.T) {
    Ret0 chan foo.Foo
   }
   BazCalled chan bool
+  BaconCalled chan bool
+  BaconInput struct {
+    Arg0 chan func(foo.Eggs) foo.Eggs
+  }
+  BaconOutput struct {
+    Ret0 chan func(foo.Eggs) foo.Eggs
+  }
  }
  `))
 	expect(err).To.Be.Nil()

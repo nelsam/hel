@@ -117,15 +117,24 @@ func (m Method) prependPackage(name string, fields *ast.FieldList) {
 		return
 	}
 	for _, field := range fields.List {
-		ident, ok := field.Type.(*ast.Ident)
-		if !ok {
-			continue
-		}
-		if !unicode.IsUpper(rune(ident.String()[0])) {
+		field.Type = m.prependTypePackage(name, field.Type)
+	}
+}
+
+func (m Method) prependTypePackage(name string, typ ast.Expr) ast.Expr {
+	switch src := typ.(type) {
+	case *ast.Ident:
+		if !unicode.IsUpper(rune(src.String()[0])) {
 			// Assume a built-in type, at least for now
-			continue
+			return src
 		}
-		field.Type = selectors(name, ident.String())
+		return selectors(name, src.String())
+	case *ast.FuncType:
+		m.prependPackage(name, src.Params)
+		m.prependPackage(name, src.Results)
+		return src
+	default:
+		return typ
 	}
 }
 

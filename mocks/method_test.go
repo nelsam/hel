@@ -138,7 +138,7 @@ func TestMockMethodLocalTypes(t *testing.T) {
 
 	spec := typeSpec(expect, `
  type Foo interface {
-   Foo(bar bar.Bar, baz string) (Foo, error)
+   Foo(bar bar.Bar, baz func(f Foo) error) (Foo, func() Foo, error)
  }`)
 	mock, err := mocks.For(spec)
 	expect(err).To.Be.Nil()
@@ -147,11 +147,11 @@ func TestMockMethodLocalTypes(t *testing.T) {
 	expected, err := format.Source([]byte(`
  package foo
 
- func (m *mockFoo) Foo(bar bar.Bar, baz string) (Foo, error) {
+ func (m *mockFoo) Foo(bar bar.Bar, baz func(f Foo) error) (Foo, func() Foo, error) {
    m.FooCalled <- true
    m.FooInput.Bar <- bar
    m.FooInput.Baz <- baz
-   return <-m.FooOutput.Ret0, <-m.FooOutput.Ret1
+   return <-m.FooOutput.Ret0, <-m.FooOutput.Ret1, <-m.FooOutput.Ret2
  }`))
 	expect(err).To.Be.Nil()
 
@@ -163,11 +163,11 @@ func TestMockMethodLocalTypes(t *testing.T) {
 	expected, err = format.Source([]byte(`
  package foo
 
- func (m *mockFoo) Foo(bar bar.Bar, baz string) (foo.Foo, error) {
+ func (m *mockFoo) Foo(bar bar.Bar, baz func(f foo.Foo) error) (foo.Foo, func() foo.Foo, error) {
    m.FooCalled <- true
    m.FooInput.Bar <- bar
    m.FooInput.Baz <- baz
-   return <-m.FooOutput.Ret0, <-m.FooOutput.Ret1
+   return <-m.FooOutput.Ret0, <-m.FooOutput.Ret1, <-m.FooOutput.Ret2
  }`))
 	expect(err).To.Be.Nil()
 

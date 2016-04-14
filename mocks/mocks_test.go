@@ -46,6 +46,7 @@ func TestOutput(t *testing.T) {
   type Bar interface {
    Foo(foo string) Foo
    Baz()
+   Bacon(func(Eggs) Eggs) func(Eggs) Eggs
   }`),
 	}
 
@@ -89,6 +90,13 @@ func TestOutput(t *testing.T) {
    Ret0 chan Foo
   }
   BazCalled chan bool
+  BaconCalled chan bool
+  BaconInput struct {
+    Arg0 chan func(Eggs) Eggs
+  }
+  BaconOutput struct {
+    Ret0 chan func(Eggs) Eggs
+  }
  }
 
  func newMockBar() *mockBar {
@@ -97,6 +105,9 @@ func TestOutput(t *testing.T) {
   m.FooInput.Foo = make(chan string, 100)
   m.FooOutput.Ret0 = make(chan Foo, 100)
   m.BazCalled = make(chan bool, 100)
+  m.BaconCalled = make(chan bool, 100)
+  m.BaconInput.Arg0 = make(chan func(Eggs) Eggs, 100)
+  m.BaconOutput.Ret0 = make(chan func(Eggs) Eggs, 100)
   return m
  }
  func (m *mockBar) Foo(foo string) Foo {
@@ -106,6 +117,11 @@ func TestOutput(t *testing.T) {
  }
  func (m *mockBar) Baz() {
   m.BazCalled <- true
+ }
+ func (m *mockBar) Bacon(arg0 func(Eggs) Eggs) func(Eggs) Eggs {
+  m.BaconCalled <- true
+  m.BaconInput.Arg0 <- arg0
+  return <-m.BaconOutput.Ret0
  }
  `))
 	expect(err).To.Be.Nil()
@@ -145,6 +161,13 @@ func TestOutput(t *testing.T) {
    Ret0 chan foo.Foo
   }
   BazCalled chan bool
+  BaconCalled chan bool
+  BaconInput struct {
+    Arg0 chan func(foo.Eggs) foo.Eggs
+  }
+  BaconOutput struct {
+    Ret0 chan func(foo.Eggs) foo.Eggs
+  }
  }
 
  func newMockBar() *mockBar {
@@ -153,6 +176,9 @@ func TestOutput(t *testing.T) {
   m.FooInput.Foo = make(chan string, 100)
   m.FooOutput.Ret0 = make(chan foo.Foo, 100)
   m.BazCalled = make(chan bool, 100)
+  m.BaconCalled = make(chan bool, 100)
+  m.BaconInput.Arg0 = make(chan func(foo.Eggs) foo.Eggs, 100)
+  m.BaconOutput.Ret0 = make(chan func(foo.Eggs) foo.Eggs, 100)
   return m
  }
  func (m *mockBar) Foo(foo string) foo.Foo {
@@ -162,6 +188,11 @@ func TestOutput(t *testing.T) {
  }
  func (m *mockBar) Baz() {
   m.BazCalled <- true
+ }
+ func (m *mockBar) Bacon(arg0 func(foo.Eggs) foo.Eggs) func(foo.Eggs) foo.Eggs {
+  m.BaconCalled <- true
+  m.BaconInput.Arg0 <- arg0
+  return <-m.BaconOutput.Ret0
  }
  `))
 	expect(err).To.Be.Nil()
