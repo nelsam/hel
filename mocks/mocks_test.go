@@ -26,7 +26,7 @@ func TestGenerate(t *testing.T) {
 	}
 
 	mockFinder := newMockTypeFinder()
-	mockFinder.ExportedTypesOutput.ret0 <- types
+	mockFinder.ExportedTypesOutput.Ret0 <- types
 	m, err := mocks.Generate(mockFinder)
 	expect(err).To.Be.Nil()
 	expect(m).To.Have.Len(2)
@@ -51,7 +51,7 @@ func TestOutput(t *testing.T) {
 	}
 
 	mockFinder := newMockTypeFinder()
-	mockFinder.ExportedTypesOutput.ret0 <- types
+	mockFinder.ExportedTypesOutput.Ret0 <- types
 	m, err := mocks.Generate(mockFinder)
 	expect(err).To.Be.Nil()
 
