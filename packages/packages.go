@@ -53,12 +53,16 @@ func (d Dir) Packages() map[string]*ast.Package {
 	return packages
 }
 
-func (d Dir) Import(path, pkg string) (*ast.Package, error) {
-	newDir := Load(path)[0]
-	if pkg, ok := newDir.Packages()[pkg]; ok {
-		return pkg, nil
+func (d Dir) Import(path, srcDir string) (string, *ast.Package, error) {
+	pkgInfo, err := build.Import(path, srcDir, 0)
+	if err != nil {
+		return "", nil, err
 	}
-	return nil, fmt.Errorf("Could not find package %s", pkg)
+	newDir := Load(path)[0]
+	if pkg, ok := newDir.Packages()[pkgInfo.Name]; ok {
+		return pkgInfo.Name, pkg, nil
+	}
+	return "", nil, fmt.Errorf("Could not find package %s", path)
 }
 
 func parsePatterns(pkgPatterns ...string) (packages []string) {

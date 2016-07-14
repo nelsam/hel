@@ -10,17 +10,32 @@ import "go/ast"
 type mockTypeFinder struct {
 	ExportedTypesCalled chan bool
 	ExportedTypesOutput struct {
-		Ret0 chan []*ast.TypeSpec
+		Types chan []*ast.TypeSpec
+	}
+	DependentsCalled chan bool
+	DependentsInput  struct {
+		Inter chan *ast.InterfaceType
+	}
+	DependentsOutput struct {
+		Dependents chan []*ast.TypeSpec
 	}
 }
 
 func newMockTypeFinder() *mockTypeFinder {
 	m := &mockTypeFinder{}
 	m.ExportedTypesCalled = make(chan bool, 100)
-	m.ExportedTypesOutput.Ret0 = make(chan []*ast.TypeSpec, 100)
+	m.ExportedTypesOutput.Types = make(chan []*ast.TypeSpec, 100)
+	m.DependentsCalled = make(chan bool, 100)
+	m.DependentsInput.Inter = make(chan *ast.InterfaceType, 100)
+	m.DependentsOutput.Dependents = make(chan []*ast.TypeSpec, 100)
 	return m
 }
-func (m *mockTypeFinder) ExportedTypes() []*ast.TypeSpec {
+func (m *mockTypeFinder) ExportedTypes() (types []*ast.TypeSpec) {
 	m.ExportedTypesCalled <- true
-	return <-m.ExportedTypesOutput.Ret0
+	return <-m.ExportedTypesOutput.Types
+}
+func (m *mockTypeFinder) Dependents(inter *ast.InterfaceType) (dependents []*ast.TypeSpec) {
+	m.DependentsCalled <- true
+	m.DependentsInput.Inter <- inter
+	return <-m.DependentsOutput.Dependents
 }

@@ -16,9 +16,10 @@ func TestLoad(t *testing.T) {
 		packages.Load("foo")
 	}).To.Panic()
 
+	wd, err := os.Getwd()
+
 	dirs := packages.Load(".")
 	expect(dirs).To.Have.Len(1)
-	wd, err := os.Getwd()
 	expect(err).To.Be.Nil()
 	expect(dirs[0].Path()).To.Equal(wd)
 	expect(dirs[0].Packages()).To.Have.Keys("packages", "packages_test")
@@ -31,11 +32,16 @@ func TestLoad(t *testing.T) {
 	dirs = packages.Load("github.com/nelsam/hel/...")
 	expect(dirs).To.Have.Len(4)
 
-	pkg, err := dirs[0].Import("path/filepath", "filepath")
+	name, pkg, err := dirs[0].Import("path/filepath", "")
 	expect(err).To.Be.Nil()
 	expect(pkg).Not.To.Be.Nil()
+	expect(name).To.Equal("filepath")
 
-	_, err = dirs[0].Import("path/filepath", "foo")
+	name, pkg, err = dirs[0].Import(".", wd)
+	expect(err).To.Be.Nil()
+	expect(pkg).Not.To.Be.Nil()
+	expect(name).To.Equal("packages")
+
+	name, pkg, err = dirs[0].Import("../..", wd)
 	expect(err).Not.To.Be.Nil()
-	expect(err.Error()).To.Equal("Could not find package foo")
 }
