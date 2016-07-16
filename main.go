@@ -1,3 +1,7 @@
+// This is free and unencumbered software released into the public
+// domain.  For more information, see <http://unlicense.org> or the
+// accompanying UNLICENSE file.
+
 package main
 
 import (
@@ -65,7 +69,7 @@ func init() {
 			if err != nil {
 				panic(err)
 			}
-			fmt.Printf("Loading directories matching pattern"+pluralize(packagePatterns, "", "s")+" %v", packagePatterns)
+			fmt.Printf("Loading directories matching %s %v", pluralize(packagePatterns, "pattern", "patterns"), packagePatterns)
 			var dirList []packages.Dir
 			progress(func() {
 				dirList = packages.Load(packagePatterns...)
