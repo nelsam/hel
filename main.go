@@ -37,16 +37,13 @@ func init() {
 	cmd = &cobra.Command{
 		Use:   "hel",
 		Short: "A mock generator for Go",
-		Long: "A simple mock generator.  The origin of the name is the Norse goddess, Hel, " +
+		Long: "hel is a simple mock generator.  The origin of the name is the Norse goddess, Hel, " +
 			"who guards over the souls of those unworthy to enter Valhalla.  You can probably " +
 			"guess how much I like mocks.",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) > 0 {
-				fmt.Println("Invalid usage.\n")
-				err := cmd.Help()
-				if err != nil {
-					panic(err)
-				}
+				fmt.Println("Invalid usage.  Help:\n")
+				cmd.HelpFunc()(nil, nil)
 				os.Exit(1)
 			}
 			packagePatterns, err := cmd.Flags().GetStringSlice("package")
