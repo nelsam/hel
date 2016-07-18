@@ -12,12 +12,12 @@ type mockTypeFinder struct {
 	ExportedTypesOutput struct {
 		Types chan []*ast.TypeSpec
 	}
-	DependentsCalled chan bool
-	DependentsInput  struct {
+	DependenciesCalled chan bool
+	DependenciesInput  struct {
 		Inter chan *ast.InterfaceType
 	}
-	DependentsOutput struct {
-		Dependents chan []*ast.TypeSpec
+	DependenciesOutput struct {
+		Dependencies chan []*ast.TypeSpec
 	}
 }
 
@@ -25,17 +25,17 @@ func newMockTypeFinder() *mockTypeFinder {
 	m := &mockTypeFinder{}
 	m.ExportedTypesCalled = make(chan bool, 100)
 	m.ExportedTypesOutput.Types = make(chan []*ast.TypeSpec, 100)
-	m.DependentsCalled = make(chan bool, 100)
-	m.DependentsInput.Inter = make(chan *ast.InterfaceType, 100)
-	m.DependentsOutput.Dependents = make(chan []*ast.TypeSpec, 100)
+	m.DependenciesCalled = make(chan bool, 100)
+	m.DependenciesInput.Inter = make(chan *ast.InterfaceType, 100)
+	m.DependenciesOutput.Dependencies = make(chan []*ast.TypeSpec, 100)
 	return m
 }
 func (m *mockTypeFinder) ExportedTypes() (types []*ast.TypeSpec) {
 	m.ExportedTypesCalled <- true
 	return <-m.ExportedTypesOutput.Types
 }
-func (m *mockTypeFinder) Dependents(inter *ast.InterfaceType) (dependents []*ast.TypeSpec) {
-	m.DependentsCalled <- true
-	m.DependentsInput.Inter <- inter
-	return <-m.DependentsOutput.Dependents
+func (m *mockTypeFinder) Dependencies(inter *ast.InterfaceType) (dependencies []*ast.TypeSpec) {
+	m.DependenciesCalled <- true
+	m.DependenciesInput.Inter <- inter
+	return <-m.DependenciesOutput.Dependencies
 }

@@ -127,7 +127,7 @@ func TestFilter(t *testing.T) {
 	expectNamesToMatch(expect, fooContainers[0].ExportedTypes(), "Foo", "FooBar", "BarFoo")
 }
 
-func TestLocalDependents(t *testing.T) {
+func TestLocalDependencies(t *testing.T) {
 	expect := expect.New(t)
 
 	mockGoDir := newMockGoDir()
@@ -167,12 +167,12 @@ func TestLocalDependents(t *testing.T) {
 	}
 	expect(bar).Not.To.Be.Nil()
 
-	dependents := found[0].Dependents(bar.Type.(*ast.InterfaceType))
-	expect(dependents).To.Have.Len(1)
-	expect(dependents[0]).To.Equal(foo)
+	dependencies := found[0].Dependencies(bar.Type.(*ast.InterfaceType))
+	expect(dependencies).To.Have.Len(1)
+	expect(dependencies[0]).To.Equal(foo)
 }
 
-func TestImportedDependents(t *testing.T) {
+func TestImportedDependencies(t *testing.T) {
 	expect := expect.New(t)
 
 	mockGoDir := newMockGoDir()
@@ -220,17 +220,17 @@ func TestImportedDependents(t *testing.T) {
 	mockables := found[0].ExportedTypes()
 	expect(mockables).To.Have.Len(1)
 
-	dependents := found[0].Dependents(mockables[0].Type.(*ast.InterfaceType))
-	expect(dependents).To.Have.Len(2)
+	dependencies := found[0].Dependencies(mockables[0].Type.(*ast.InterfaceType))
+	expect(dependencies).To.Have.Len(2)
 
 	names := make(map[string]bool)
-	for _, dependent := range dependents {
+	for _, dependent := range dependencies {
 		names[dependent.Name.String()] = true
 	}
 	expect(names).To.Equal(map[string]bool{"Foo": true, "Bar": true})
 }
 
-func TestAliasedImportedDependents(t *testing.T) {
+func TestAliasedImportedDependencies(t *testing.T) {
 	expect := expect.New(t)
 
 	mockGoDir := newMockGoDir()
@@ -278,11 +278,11 @@ func TestAliasedImportedDependents(t *testing.T) {
 	mockables := found[0].ExportedTypes()
 	expect(mockables).To.Have.Len(1)
 
-	dependents := found[0].Dependents(mockables[0].Type.(*ast.InterfaceType))
-	expect(dependents).To.Have.Len(2)
+	dependencies := found[0].Dependencies(mockables[0].Type.(*ast.InterfaceType))
+	expect(dependencies).To.Have.Len(2)
 
 	names := make(map[string]bool)
-	for _, dependent := range dependents {
+	for _, dependent := range dependencies {
 		names[dependent.Name.String()] = true
 	}
 	expect(names).To.Equal(map[string]bool{"Foo": true, "Bar": true})

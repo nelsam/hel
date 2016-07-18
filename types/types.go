@@ -23,11 +23,11 @@ type GoDir interface {
 // A Dir is a type that represents a directory containing Go
 // packages.
 type Dir struct {
-	dir        string
-	pkg        string
-	testPkg    string
-	types      []*ast.TypeSpec
-	dependents map[*ast.InterfaceType][]*ast.TypeSpec
+	dir          string
+	pkg          string
+	testPkg      string
+	types        []*ast.TypeSpec
+	dependencies map[*ast.InterfaceType][]*ast.TypeSpec
 }
 
 // Dir returns the directory path that d represents.
@@ -59,10 +59,10 @@ func (d Dir) ExportedTypes() []*ast.TypeSpec {
 	return d.types
 }
 
-// Dependents returns all interface types that typ depends on for
+// Dependencies returns all interface types that typ depends on for
 // method parameters or results.
-func (d Dir) Dependents(typ *ast.InterfaceType) []*ast.TypeSpec {
-	return d.dependents[typ]
+func (d Dir) Dependencies(typ *ast.InterfaceType) []*ast.TypeSpec {
+	return d.dependencies[typ]
 }
 
 func (d Dir) addPkg(name string, pkg *ast.Package, dir GoDir) Dir {
@@ -80,7 +80,7 @@ func (d Dir) addPkg(name string, pkg *ast.Package, dir GoDir) Dir {
 		d.pkg = name
 	}
 	for inter, typs := range deps {
-		d.dependents[inter] = append(d.dependents[inter], typs...)
+		d.dependencies[inter] = append(d.dependencies[inter], typs...)
 	}
 	d.types = append(d.types, newTypes...)
 	return d
@@ -112,8 +112,8 @@ func Load(goDirs ...GoDir) Dirs {
 	typeDirs := make(Dirs, 0, len(goDirs))
 	for _, dir := range goDirs {
 		d := Dir{
-			dir:        dir.Path(),
-			dependents: make(map[*ast.InterfaceType][]*ast.TypeSpec),
+			dir:          dir.Path(),
+			dependencies: make(map[*ast.InterfaceType][]*ast.TypeSpec),
 		}
 		for name, pkg := range dir.Packages() {
 			d = d.addPkg(name, pkg, dir)
@@ -141,20 +141,20 @@ func (d Dirs) Filter(patterns ...string) (dirs Dirs) {
 	return dirs
 }
 
-// dependents returns all *ast.TypeSpec values with a Type of
+// dependencies returns all *ast.TypeSpec values with a Type of
 // *ast.InterfaceType.  It assumes that typ is pre-flattened.
-func dependents(typ *ast.InterfaceType, available []*ast.TypeSpec, withImports []*ast.ImportSpec, dir GoDir) []*ast.TypeSpec {
+func dependencies(typ *ast.InterfaceType, available []*ast.TypeSpec, withImports []*ast.ImportSpec, dir GoDir) []*ast.TypeSpec {
 	if typ.Methods == nil {
 		return nil
 	}
-	dependents := make(map[*ast.TypeSpec]struct{})
+	dependencies := make(map[*ast.TypeSpec]struct{})
 	for _, meth := range typ.Methods.List {
 		f := meth.Type.(*ast.FuncType)
-		addSpecs(dependents, loadDependents(f.Params, available, withImports, dir)...)
-		addSpecs(dependents, loadDependents(f.Results, available, withImports, dir)...)
+		addSpecs(dependencies, loadDependencies(f.Params, available, withImports, dir)...)
+		addSpecs(dependencies, loadDependencies(f.Results, available, withImports, dir)...)
 	}
-	dependentSlice := make([]*ast.TypeSpec, 0, len(dependents))
-	for dependent := range dependents {
+	dependentSlice := make([]*ast.TypeSpec, 0, len(dependencies))
+	for dependent := range dependencies {
 		dependentSlice = append(dependentSlice, dependent)
 	}
 	return dependentSlice
@@ -173,7 +173,7 @@ func names(specs []*ast.TypeSpec) (names []string) {
 	return names
 }
 
-func loadDependents(fields *ast.FieldList, available []*ast.TypeSpec, withImports []*ast.ImportSpec, dir GoDir) (dependents []*ast.TypeSpec) {
+func loadDependencies(fields *ast.FieldList, available []*ast.TypeSpec, withImports []*ast.ImportSpec, dir GoDir) (dependencies []*ast.TypeSpec) {
 	if fields == nil {
 		return nil
 	}
@@ -183,7 +183,7 @@ func loadDependents(fields *ast.FieldList, available []*ast.TypeSpec, withImport
 			for _, spec := range available {
 				if spec.Name.String() == src.String() {
 					if _, ok := spec.Type.(*ast.InterfaceType); ok {
-						dependents = append(dependents, spec)
+						dependencies = append(dependencies, spec)
 					}
 					break
 				}
@@ -195,7 +195,7 @@ func loadDependents(fields *ast.FieldList, available []*ast.TypeSpec, withImport
 				importName := imp.Name.String()
 				pkgName, pkg, err := dir.Import(importPath, "")
 				if err != nil {
-					log.Printf("Error loading dependents: %s", err)
+					log.Printf("Error loading dependencies: %s", err)
 					continue
 				}
 				if imp.Name == nil {
@@ -205,24 +205,24 @@ func loadDependents(fields *ast.FieldList, available []*ast.TypeSpec, withImport
 					continue
 				}
 				d := Dir{
-					dependents: make(map[*ast.InterfaceType][]*ast.TypeSpec),
+					dependencies: make(map[*ast.InterfaceType][]*ast.TypeSpec),
 				}
 				d = d.addPkg(importName, pkg, dir)
 				for _, typ := range d.ExportedTypes() {
 					if typ.Name.String() == src.Sel.String() {
 						if _, ok := typ.Type.(*ast.InterfaceType); ok {
-							dependents = append(dependents, typ)
+							dependencies = append(dependencies, typ)
 						}
 						break
 					}
 				}
 			}
 		case *ast.FuncType:
-			dependents = append(dependents, loadDependents(src.Params, available, withImports, dir)...)
-			dependents = append(dependents, loadDependents(src.Results, available, withImports, dir)...)
+			dependencies = append(dependencies, loadDependencies(src.Params, available, withImports, dir)...)
+			dependencies = append(dependencies, loadDependencies(src.Results, available, withImports, dir)...)
 		}
 	}
-	return dependents
+	return dependencies
 }
 
 func loadPkgTypeSpecs(pkg *ast.Package, dir GoDir) (specs []*ast.TypeSpec, depMap map[*ast.InterfaceType][]*ast.TypeSpec, hasTests bool) {
@@ -234,7 +234,7 @@ func loadPkgTypeSpecs(pkg *ast.Package, dir GoDir) (specs []*ast.TypeSpec, depMa
 			if !ok {
 				continue
 			}
-			depMap[inter] = dependents(inter, specs, imports[spec], dir)
+			depMap[inter] = dependencies(inter, specs, imports[spec], dir)
 		}
 	}()
 	for name, f := range pkg.Files {

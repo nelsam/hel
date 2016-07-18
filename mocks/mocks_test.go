@@ -30,7 +30,7 @@ func TestGenerate(t *testing.T) {
 	}
 
 	mockFinder := newMockTypeFinder()
-	close(mockFinder.DependentsOutput.Dependents)
+	close(mockFinder.DependenciesOutput.Dependencies)
 	mockFinder.ExportedTypesOutput.Types <- types
 	m, err := mocks.Generate(mockFinder)
 	expect(err).To.Be.Nil()
@@ -56,7 +56,7 @@ func TestOutput(t *testing.T) {
 	}
 
 	mockFinder := newMockTypeFinder()
-	close(mockFinder.DependentsOutput.Dependents)
+	close(mockFinder.DependenciesOutput.Dependencies)
 	mockFinder.ExportedTypesOutput.Types <- types
 	m, err := mocks.Generate(mockFinder)
 	expect(err).To.Be.Nil()
@@ -296,7 +296,7 @@ func TestOutput(t *testing.T) {
 	expect(buf.String()).To.Equal(string(expected))
 }
 
-func TestOutput_Dependents(t *testing.T) {
+func TestOutput_Dependencies(t *testing.T) {
 	expect := expect.New(t)
 
 	types := []*ast.TypeSpec{
@@ -315,7 +315,7 @@ func TestOutput_Dependents(t *testing.T) {
 
 	mockFinder := newMockTypeFinder()
 	mockFinder.ExportedTypesOutput.Types <- types
-	mockFinder.DependentsOutput.Dependents <- deps
+	mockFinder.DependenciesOutput.Dependencies <- deps
 	m, err := mocks.Generate(mockFinder)
 	expect(err).To.Be.Nil()
 
