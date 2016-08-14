@@ -134,7 +134,7 @@ func makeMocks(types types.Dir, fileName string, chanSize int, blockingReturn bo
 		return "", err
 	}
 	defer f.Close()
-	return filePath, mocks.Output(types.TestPackage(), chanSize, f)
+	return filePath, mocks.Output(types.TestPackage(), types.Dir(), chanSize, f)
 }
 
 func progress(f func()) {
