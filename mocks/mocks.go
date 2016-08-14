@@ -131,7 +131,6 @@ func Generate(finder TypeFinder) (Mocks, error) {
 	for _, typ := range base {
 		types = append(types, typ)
 		if inter, ok := typ.Type.(*ast.InterfaceType); ok {
-
 			types = append(types, finder.Dependencies(inter)...)
 		}
 	}
