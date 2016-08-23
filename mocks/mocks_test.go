@@ -12,6 +12,7 @@ import (
 
 	"github.com/a8m/expect"
 	"github.com/nelsam/hel/mocks"
+	"github.com/nelsam/hel/types"
 )
 
 func TestGenerate(t *testing.T) {
@@ -299,22 +300,33 @@ func TestOutput(t *testing.T) {
 func TestOutput_Dependencies(t *testing.T) {
 	expect := expect.New(t)
 
-	types := []*ast.TypeSpec{
+	typs := []*ast.TypeSpec{
 		typeSpec(expect, `
   type Bar interface {
    Foo(foo string) Foo
   }`),
 	}
 
-	deps := []*ast.TypeSpec{
-		typeSpec(expect, `
-	type Foo interface{
-		Foo() string
-	}`),
+	deps := []types.Dependency{
+		{
+			Type: typeSpec(expect, `
+			type Foo interface{
+				Foo() string
+			}`),
+		},
+		{
+			PkgPath: "some/path/to/foo",
+			PkgName: "baz",
+			Type: typeSpec(expect, `
+			type Baz interface {
+				Baz() Baz
+			}
+			`),
+		},
 	}
 
 	mockFinder := newMockTypeFinder()
-	mockFinder.ExportedTypesOutput.Types <- types
+	mockFinder.ExportedTypesOutput.Types <- typs
 	mockFinder.DependenciesOutput.Dependencies <- deps
 	m, err := mocks.Generate(mockFinder)
 	expect(err).To.Be.Nil()
@@ -371,6 +383,24 @@ func TestOutput_Dependencies(t *testing.T) {
  func (m *mockFoo) Foo() string {
   m.FooCalled <- true
   return <-m.FooOutput.Ret0
+ }
+
+ type mockBaz struct {
+  BazCalled chan bool
+  BazOutput struct {
+   Ret0 chan baz.Baz
+  }
+ }
+
+ func newMockBaz() *mockBaz {
+  m := &mockBaz{}
+  m.BazCalled = make(chan bool, 100)
+  m.BazOutput.Ret0 = make(chan baz.Baz, 100)
+  return m
+ }
+ func (m *mockBaz) Baz() baz.Baz {
+  m.BazCalled <- true
+  return <-m.BazOutput.Ret0
  }
  `))
 	expect(err).To.Be.Nil()

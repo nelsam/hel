@@ -5,7 +5,11 @@
 
 package mocks_test
 
-import "go/ast"
+import (
+	"go/ast"
+
+	"github.com/nelsam/hel/types"
+)
 
 type mockTypeFinder struct {
 	ExportedTypesCalled chan bool
@@ -17,7 +21,7 @@ type mockTypeFinder struct {
 		Inter chan *ast.InterfaceType
 	}
 	DependenciesOutput struct {
-		Dependencies chan []*ast.TypeSpec
+		Dependencies chan []types.Dependency
 	}
 }
 
@@ -27,14 +31,14 @@ func newMockTypeFinder() *mockTypeFinder {
 	m.ExportedTypesOutput.Types = make(chan []*ast.TypeSpec, 100)
 	m.DependenciesCalled = make(chan bool, 100)
 	m.DependenciesInput.Inter = make(chan *ast.InterfaceType, 100)
-	m.DependenciesOutput.Dependencies = make(chan []*ast.TypeSpec, 100)
+	m.DependenciesOutput.Dependencies = make(chan []types.Dependency, 100)
 	return m
 }
 func (m *mockTypeFinder) ExportedTypes() (types []*ast.TypeSpec) {
 	m.ExportedTypesCalled <- true
 	return <-m.ExportedTypesOutput.Types
 }
-func (m *mockTypeFinder) Dependencies(inter *ast.InterfaceType) (dependencies []*ast.TypeSpec) {
+func (m *mockTypeFinder) Dependencies(inter *ast.InterfaceType) (dependencies []types.Dependency) {
 	m.DependenciesCalled <- true
 	m.DependenciesInput.Inter <- inter
 	return <-m.DependenciesOutput.Dependencies

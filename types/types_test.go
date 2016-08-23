@@ -169,7 +169,9 @@ func TestLocalDependencies(t *testing.T) {
 
 	dependencies := found[0].Dependencies(bar.Type.(*ast.InterfaceType))
 	expect(dependencies).To.Have.Len(1)
-	expect(dependencies[0]).To.Equal(foo)
+	expect(dependencies[0].Type).To.Equal(foo)
+	expect(dependencies[0].PkgName).To.Equal("")
+	expect(dependencies[0].PkgPath).To.Equal("")
 }
 
 func TestImportedDependencies(t *testing.T) {
@@ -225,7 +227,9 @@ func TestImportedDependencies(t *testing.T) {
 
 	names := make(map[string]bool)
 	for _, dependent := range dependencies {
-		names[dependent.Name.String()] = true
+		expect(dependent.PkgName).To.Equal("foo")
+		expect(dependent.PkgPath).To.Equal("some/path/to/foo")
+		names[dependent.Type.Name.String()] = true
 	}
 	expect(names).To.Equal(map[string]bool{"Foo": true, "Bar": true})
 }
@@ -283,7 +287,9 @@ func TestAliasedImportedDependencies(t *testing.T) {
 
 	names := make(map[string]bool)
 	for _, dependent := range dependencies {
-		names[dependent.Name.String()] = true
+		expect(dependent.PkgName).To.Equal("baz")
+		expect(dependent.PkgPath).To.Equal("some/path/to/foo")
+		names[dependent.Type.Name.String()] = true
 	}
 	expect(names).To.Equal(map[string]bool{"Foo": true, "Bar": true})
 }
