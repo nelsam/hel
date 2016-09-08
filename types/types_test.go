@@ -26,7 +26,7 @@ func TestLoad_NoTestFiles(t *testing.T) {
 		},
 	}
 	found := types.Load(mockGoDir)
-	expect(found).To.Have.Len(1)
+	expect(found).To.Have.Len(1).Else.FailNow()
 	expect(found[0].Len()).To.Equal(1)
 	expect(found[0].Dir()).To.Equal("/some/path")
 	expect(found[0].Package()).To.Equal("foo")
@@ -53,7 +53,7 @@ func TestLoad_TestFilesInTestPackage(t *testing.T) {
 		},
 	}
 	found := types.Load(mockGoDir)
-	expect(found).To.Have.Len(1)
+	expect(found).To.Have.Len(1).Else.FailNow()
 	expect(found[0].Len()).To.Equal(1)
 	expect(found[0].Package()).To.Equal("foo")
 	expect(found[0].TestPackage()).To.Equal("foo_test")
@@ -74,7 +74,7 @@ func TestLoad_TestFilesInNonTestPackage(t *testing.T) {
 		},
 	}
 	found := types.Load(mockGoDir)
-	expect(found).To.Have.Len(1)
+	expect(found).To.Have.Len(1).Else.FailNow()
 	expect(found[0].Len()).To.Equal(1)
 	expect(found[0].Package()).To.Equal("foo")
 	expect(found[0].TestPackage()).To.Equal("foo")
@@ -99,30 +99,30 @@ func TestFilter(t *testing.T) {
 		},
 	}
 	found := types.Load(mockGoDir)
-	expect(found).To.Have.Len(1)
+	expect(found).To.Have.Len(1).Else.FailNow()
 	expect(found[0].Len()).To.Equal(4)
 
 	notFiltered := found.Filter()
-	expect(notFiltered).To.Have.Len(1)
+	expect(notFiltered).To.Have.Len(1).Else.FailNow()
 	expect(notFiltered[0].Len()).To.Equal(4)
 
 	foos := found.Filter("Foo")
-	expect(foos).To.Have.Len(1)
+	expect(foos).To.Have.Len(1).Else.FailNow()
 	expect(foos[0].Len()).To.Equal(1)
 	expect(foos[0].ExportedTypes()[0].Name.String()).To.Equal("Foo")
 
 	fooPrefixes := found.Filter("Foo.*")
-	expect(fooPrefixes).To.Have.Len(1)
+	expect(fooPrefixes).To.Have.Len(1).Else.FailNow()
 	expect(fooPrefixes[0].Len()).To.Equal(2)
 	expectNamesToMatch(expect, fooPrefixes[0].ExportedTypes(), "Foo", "FooBar")
 
 	fooPostfixes := found.Filter(".*Foo")
-	expect(fooPostfixes).To.Have.Len(1)
+	expect(fooPostfixes).To.Have.Len(1).Else.FailNow()
 	expect(fooPostfixes[0].Len()).To.Equal(2)
 	expectNamesToMatch(expect, fooPostfixes[0].ExportedTypes(), "Foo", "BarFoo")
 
 	fooContainers := found.Filter("Foo.*", ".*Foo")
-	expect(fooContainers).To.Have.Len(1)
+	expect(fooContainers).To.Have.Len(1).Else.FailNow()
 	expect(fooContainers[0].Len()).To.Equal(3)
 	expectNamesToMatch(expect, fooContainers[0].ExportedTypes(), "Foo", "FooBar", "BarFoo")
 }
@@ -152,7 +152,7 @@ func TestLocalDependencies(t *testing.T) {
 
 	found := types.Load(mockGoDir)
 
-	expect(found).To.Have.Len(1)
+	expect(found).To.Have.Len(1).Else.FailNow()
 	mockables := found[0].ExportedTypes()
 	expect(mockables).To.Have.Len(2)
 
@@ -165,10 +165,10 @@ func TestLocalDependencies(t *testing.T) {
 			foo = mockable
 		}
 	}
-	expect(bar).Not.To.Be.Nil()
+	expect(bar).Not.To.Be.Nil().Else.FailNow()
 
 	dependencies := found[0].Dependencies(bar.Type.(*ast.InterfaceType))
-	expect(dependencies).To.Have.Len(1)
+	expect(dependencies).To.Have.Len(1).Else.FailNow()
 	expect(dependencies[0].Type).To.Equal(foo)
 	expect(dependencies[0].PkgName).To.Equal("")
 	expect(dependencies[0].PkgPath).To.Equal("")
@@ -218,7 +218,7 @@ func TestImportedDependencies(t *testing.T) {
 	expect(mockGoDir.ImportCalled).To.Have.Len(2)
 	expect(<-mockGoDir.ImportInput.Path).To.Equal("some/path/to/foo")
 
-	expect(found).To.Have.Len(1)
+	expect(found).To.Have.Len(1).Else.FailNow()
 	mockables := found[0].ExportedTypes()
 	expect(mockables).To.Have.Len(1)
 
@@ -278,7 +278,7 @@ func TestAliasedImportedDependencies(t *testing.T) {
 	expect(mockGoDir.ImportCalled).To.Have.Len(2)
 	expect(<-mockGoDir.ImportInput.Path).To.Equal("some/path/to/foo")
 
-	expect(found).To.Have.Len(1)
+	expect(found).To.Have.Len(1).Else.FailNow()
 	mockables := found[0].ExportedTypes()
 	expect(mockables).To.Have.Len(1)
 
@@ -316,15 +316,15 @@ func TestAnonymousLocalTypes(t *testing.T) {
 		},
 	}
 	found := types.Load(mockGoDir)
-	expect(found).To.Have.Len(1)
+	expect(found).To.Have.Len(1).Else.FailNow()
 
 	typs := found[0].ExportedTypes()
 	expect(typs).To.Have.Len(2)
 
 	spec := find(expect, typs, "Bar")
-	expect(spec).Not.To.Be.Nil()
+	expect(spec).Not.To.Be.Nil().Else.FailNow()
 	inter := spec.Type.(*ast.InterfaceType)
-	expect(inter.Methods.List).To.Have.Len(2)
+	expect(inter.Methods.List).To.Have.Len(2).Else.FailNow()
 	foo := inter.Methods.List[0]
 	expect(foo.Names[0].String()).To.Equal("Foo")
 	_, isFunc := foo.Type.(*ast.FuncType)
@@ -379,27 +379,27 @@ func TestAnonymousImportedTypes(t *testing.T) {
 	expect(mockGoDir.ImportCalled).To.Have.Len(3)
 	expect(<-mockGoDir.ImportInput.Path).To.Equal("some/path/to/foo")
 
-	expect(found).To.Have.Len(1)
+	expect(found).To.Have.Len(1).Else.FailNow()
 	typs := found[0].ExportedTypes()
-	expect(typs).To.Have.Len(1)
+	expect(typs).To.Have.Len(1).Else.FailNow()
 
 	spec := typs[0]
-	expect(spec).Not.To.Be.Nil()
+	expect(spec).Not.To.Be.Nil().Else.FailNow()
 	inter := spec.Type.(*ast.InterfaceType)
-	expect(inter.Methods.List).To.Have.Len(2)
+	expect(inter.Methods.List).To.Have.Len(2).Else.FailNow()
 
 	foo := inter.Methods.List[0]
 	expect(foo.Names[0].String()).To.Equal("Foo")
 	f, isFunc := foo.Type.(*ast.FuncType)
 	expect(isFunc).To.Be.Ok()
-	expect(f.Params.List).To.Have.Len(1)
-	expect(f.Results.List).To.Have.Len(1)
+	expect(f.Params.List).To.Have.Len(1).Else.FailNow()
+	expect(f.Results.List).To.Have.Len(1).Else.FailNow()
 	expr, isSelector := f.Params.List[0].Type.(*ast.SelectorExpr)
-	expect(isSelector).To.Be.Ok()
+	expect(isSelector).To.Be.Ok().Else.FailNow()
 	expect(expr.X.(*ast.Ident).String()).To.Equal("foo")
 	expect(expr.Sel.String()).To.Equal("X")
 	expr, isSelector = f.Results.List[0].Type.(*ast.SelectorExpr)
-	expect(isSelector).To.Be.Ok()
+	expect(isSelector).To.Be.Ok().Else.FailNow()
 	expect(expr.X.(*ast.Ident).String()).To.Equal("foo")
 	expect(expr.Sel.String()).To.Equal("Y")
 }
@@ -452,27 +452,27 @@ func TestAnonymousAliasedImportedTypes(t *testing.T) {
 	expect(mockGoDir.ImportCalled).To.Have.Len(3)
 	expect(<-mockGoDir.ImportInput.Path).To.Equal("some/path/to/foo")
 
-	expect(found).To.Have.Len(1)
+	expect(found).To.Have.Len(1).Else.FailNow()
 	typs := found[0].ExportedTypes()
-	expect(typs).To.Have.Len(1)
+	expect(typs).To.Have.Len(1).Else.FailNow()
 
 	spec := typs[0]
-	expect(spec).Not.To.Be.Nil()
+	expect(spec).Not.To.Be.Nil().Else.FailNow()
 	inter := spec.Type.(*ast.InterfaceType)
-	expect(inter.Methods.List).To.Have.Len(2)
+	expect(inter.Methods.List).To.Have.Len(2).Else.FailNow()
 
 	foo := inter.Methods.List[0]
 	expect(foo.Names[0].String()).To.Equal("Foo")
 	f, isFunc := foo.Type.(*ast.FuncType)
-	expect(isFunc).To.Be.Ok()
-	expect(f.Params.List).To.Have.Len(1)
-	expect(f.Results.List).To.Have.Len(1)
+	expect(isFunc).To.Be.Ok().Else.FailNow()
+	expect(f.Params.List).To.Have.Len(1).Else.FailNow()
+	expect(f.Results.List).To.Have.Len(1).Else.FailNow()
 	expr, isSelector := f.Params.List[0].Type.(*ast.SelectorExpr)
-	expect(isSelector).To.Be.Ok()
+	expect(isSelector).To.Be.Ok().Else.FailNow()
 	expect(expr.X.(*ast.Ident).String()).To.Equal("baz")
 	expect(expr.Sel.String()).To.Equal("X")
 	expr, isSelector = f.Results.List[0].Type.(*ast.SelectorExpr)
-	expect(isSelector).To.Be.Ok()
+	expect(isSelector).To.Be.Ok().Else.FailNow()
 	expect(expr.X.(*ast.Ident).String()).To.Equal("baz")
 	expect(expr.Sel.String()).To.Equal("Y")
 }
@@ -526,45 +526,45 @@ func TestAnonymousImportedTypes_Recursion(t *testing.T) {
 	expect(mockGoDir.ImportCalled).To.Have.Len(5)
 	expect(<-mockGoDir.ImportInput.Path).To.Equal("some/path/to/foo")
 
-	expect(found).To.Have.Len(1)
+	expect(found).To.Have.Len(1).Else.FailNow()
 	typs := found[0].ExportedTypes()
-	expect(typs).To.Have.Len(1)
+	expect(typs).To.Have.Len(1).Else.FailNow()
 
 	spec := typs[0]
-	expect(spec).Not.To.Be.Nil()
+	expect(spec).Not.To.Be.Nil().Else.FailNow()
 	inter := spec.Type.(*ast.InterfaceType)
-	expect(inter.Methods.List).To.Have.Len(2)
+	expect(inter.Methods.List).To.Have.Len(2).Else.FailNow()
 
 	foo := inter.Methods.List[0]
 	expect(foo.Names[0].String()).To.Equal("Foo")
 	f, isFunc := foo.Type.(*ast.FuncType)
-	expect(isFunc).To.Be.Ok()
-	expect(f.Params.List).To.Have.Len(1)
-	expect(f.Results.List).To.Have.Len(1)
+	expect(isFunc).To.Be.Ok().Else.FailNow()
+	expect(f.Params.List).To.Have.Len(1).Else.FailNow()
+	expect(f.Results.List).To.Have.Len(1).Else.FailNow()
 
 	input := f.Params.List[0]
 	in, isFunc := input.Type.(*ast.FuncType)
-	expect(isFunc).To.Be.Ok()
+	expect(isFunc).To.Be.Ok().Else.FailNow()
 
 	expr, isSelector := in.Params.List[0].Type.(*ast.SelectorExpr)
-	expect(isSelector).To.Be.Ok()
+	expect(isSelector).To.Be.Ok().Else.FailNow()
 	expect(expr.X.(*ast.Ident).String()).To.Equal("foo")
 	expect(expr.Sel.String()).To.Equal("X")
 	expr, isSelector = in.Results.List[0].Type.(*ast.SelectorExpr)
-	expect(isSelector).To.Be.Ok()
+	expect(isSelector).To.Be.Ok().Else.FailNow()
 	expect(expr.X.(*ast.Ident).String()).To.Equal("foo")
 	expect(expr.Sel.String()).To.Equal("Y")
 
 	output := f.Params.List[0]
 	out, isFunc := output.Type.(*ast.FuncType)
-	expect(isFunc).To.Be.Ok()
+	expect(isFunc).To.Be.Ok().Else.FailNow()
 
 	expr, isSelector = out.Params.List[0].Type.(*ast.SelectorExpr)
-	expect(isSelector).To.Be.Ok()
+	expect(isSelector).To.Be.Ok().Else.FailNow()
 	expect(expr.X.(*ast.Ident).String()).To.Equal("foo")
 	expect(expr.Sel.String()).To.Equal("X")
 	expr, isSelector = out.Results.List[0].Type.(*ast.SelectorExpr)
-	expect(isSelector).To.Be.Ok()
+	expect(isSelector).To.Be.Ok().Else.FailNow()
 	expect(expr.X.(*ast.Ident).String()).To.Equal("foo")
 	expect(expr.Sel.String()).To.Equal("Y")
 }

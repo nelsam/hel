@@ -16,7 +16,6 @@ const packagePrefix = "package foo\n\n"
 
 func parse(expect func(interface{}) *expect.Expect, code string) *ast.File {
 	f, err := parser.ParseFile(token.NewFileSet(), "", packagePrefix+code, 0)
-	expect(err).To.Be.Nil()
-	expect(f).Not.To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 	return f
 }

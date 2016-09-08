@@ -18,7 +18,7 @@ func TestNewErrorsForNonInterfaceTypes(t *testing.T) {
 
 	spec := typeSpec(expect, "type Foo func()")
 	_, err := mocks.For(spec)
-	expect(err).Not.To.Be.Nil()
+	expect(err).Not.To.Be.Nil().Else.FailNow()
 	expect(err.Error()).To.Equal("TypeSpec.Type expected to be *ast.InterfaceType, was *ast.FuncType")
 }
 
@@ -27,8 +27,7 @@ func TestMockName(t *testing.T) {
 
 	spec := typeSpec(expect, "type Foo interface{}")
 	m, err := mocks.For(spec)
-	expect(err).To.Be.Nil()
-	expect(m).Not.To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 	expect(m.Name()).To.Equal("mockFoo")
 }
 
@@ -44,8 +43,7 @@ func TestMockTypeDecl(t *testing.T) {
  }
  `)
 	m, err := mocks.For(spec)
-	expect(err).To.Be.Nil()
-	expect(m).Not.To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 
 	expected, err := format.Source([]byte(`
  package foo
@@ -75,7 +73,7 @@ func TestMockTypeDecl(t *testing.T) {
   }
  }
  `))
-	expect(err).To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 
 	src := source(expect, "foo", []ast.Decl{m.Decl()}, nil)
 	expect(src).To.Equal(string(expected))
@@ -110,7 +108,7 @@ func TestMockTypeDecl(t *testing.T) {
   }
  }
  `))
-	expect(err).To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 
 	src = source(expect, "foo", []ast.Decl{m.Decl()}, nil)
 	expect(src).To.Equal(string(expected))
@@ -148,7 +146,7 @@ func TestMockTypeDecl(t *testing.T) {
   }
  }
  `))
-	expect(err).To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 
 	src = source(expect, "foo", []ast.Decl{m.Decl()}, nil)
 	expect(src).To.Equal(string(expected))
@@ -163,8 +161,7 @@ func TestMockTypeDecl_DirectionalChansGetParens(t *testing.T) {
  }
  `)
 	m, err := mocks.For(spec)
-	expect(err).To.Be.Nil()
-	expect(m).Not.To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 
 	expected, err := format.Source([]byte(`
  package foo
@@ -179,7 +176,7 @@ func TestMockTypeDecl_DirectionalChansGetParens(t *testing.T) {
   }
  }
  `))
-	expect(err).To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 
 	src := source(expect, "foo", []ast.Decl{m.Decl()}, nil)
 	expect(src).To.Equal(string(expected))
@@ -194,8 +191,7 @@ type Foo interface {
 }
 `)
 	m, err := mocks.For(spec)
-	expect(err).To.Be.Nil()
-	expect(m).Not.To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 
 	expected, err := format.Source([]byte(`
  package foo
@@ -207,7 +203,7 @@ type Foo interface {
   }
  }
  `))
-	expect(err).To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 
 	src := source(expect, "foo", []ast.Decl{m.Decl()}, nil)
 	expect(src).To.Equal(string(expected))
@@ -222,8 +218,7 @@ type Foo interface {
 }
 `)
 	m, err := mocks.For(spec)
-	expect(err).To.Be.Nil()
-	expect(m).Not.To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 
 	expected, err := format.Source([]byte(`
 package foo
@@ -235,7 +230,7 @@ type mockFoo struct {
  }
 }
 `))
-	expect(err).To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 
 	src := source(expect, "foo", []ast.Decl{m.Decl()}, nil)
 	expect(src).To.Equal(string(expected))
@@ -251,8 +246,7 @@ func TestMockConstructor(t *testing.T) {
  }
  `)
 	m, err := mocks.For(spec)
-	expect(err).To.Be.Nil()
-	expect(m).Not.To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 
 	expected, err := format.Source([]byte(`
  package foo
@@ -267,7 +261,7 @@ func TestMockConstructor(t *testing.T) {
   m.BarOutput.Ret0 = make(chan string, 300)
   return m
  }`))
-	expect(err).To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 
 	src := source(expect, "foo", []ast.Decl{m.Constructor(300)}, nil)
 	expect(src).To.Equal(string(expected))
@@ -282,8 +276,7 @@ func TestMockConstructor_DirectionalChansGetParens(t *testing.T) {
  }
  `)
 	m, err := mocks.For(spec)
-	expect(err).To.Be.Nil()
-	expect(m).Not.To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 
 	expected, err := format.Source([]byte(`
  package foo
@@ -296,7 +289,7 @@ func TestMockConstructor_DirectionalChansGetParens(t *testing.T) {
   return m
  }
  `))
-	expect(err).To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 
 	src := source(expect, "foo", []ast.Decl{m.Constructor(200)}, nil)
 	expect(src).To.Equal(string(expected))
@@ -311,8 +304,7 @@ func TestMockConstructor_VariadicParams(t *testing.T) {
  }
  `)
 	m, err := mocks.For(spec)
-	expect(err).To.Be.Nil()
-	expect(m).Not.To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 
 	expected, err := format.Source([]byte(`
  package foo
@@ -324,7 +316,7 @@ func TestMockConstructor_VariadicParams(t *testing.T) {
   return m
  }
  `))
-	expect(err).To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 
 	src := source(expect, "foo", []ast.Decl{m.Constructor(200)}, nil)
 	expect(src).To.Equal(string(expected))
@@ -339,15 +331,13 @@ func TestMockAst(t *testing.T) {
   Baz() (baz int)
  }`)
 	m, err := mocks.For(spec)
-	expect(err).To.Be.Nil()
-	expect(m).Not.To.Be.Nil()
-
-	expect(m.Methods()).To.Have.Len(2)
+	expect(err).To.Be.Nil().Else.FailNow()
 
 	decls := m.Ast(300)
-	expect(decls).To.Have.Len(4)
+	expect(decls).To.Have.Len(4).Else.FailNow()
 	expect(decls[0]).To.Equal(m.Decl())
 	expect(decls[1]).To.Equal(m.Constructor(300))
+	expect(m.Methods()).To.Have.Len(2).Else.FailNow()
 	expect(decls[2]).To.Equal(m.Methods()[0].Ast())
 	expect(decls[3]).To.Equal(m.Methods()[1].Ast())
 }

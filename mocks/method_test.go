@@ -21,7 +21,7 @@ func TestMockSimpleMethod(t *testing.T) {
          Foo()
  }`)
 	mock, err := mocks.For(spec)
-	expect(err).To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 	method := mocks.MethodFor(mock, "Foo", method(expect, spec))
 
 	expected, err := format.Source([]byte(`
@@ -30,7 +30,7 @@ func TestMockSimpleMethod(t *testing.T) {
  func (m *mockFoo) Foo() {
    m.FooCalled <- true
  }`))
-	expect(err).To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 
 	src := source(expect, "foo", []ast.Decl{method.Ast()}, nil)
 	expect(src).To.Equal(string(expected))
@@ -44,7 +44,7 @@ func TestMockMethodParams(t *testing.T) {
          Foo(foo, bar string, baz int)
  }`)
 	mock, err := mocks.For(spec)
-	expect(err).To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 	method := mocks.MethodFor(mock, "Foo", method(expect, spec))
 
 	expected, err := format.Source([]byte(`
@@ -56,7 +56,7 @@ func TestMockMethodParams(t *testing.T) {
    m.FooInput.Bar <- bar
    m.FooInput.Baz <- baz
  }`))
-	expect(err).To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 
 	src := source(expect, "foo", []ast.Decl{method.Ast()}, nil)
 	expect(src).To.Equal(string(expected))
@@ -70,7 +70,7 @@ func TestMockMethodReturns(t *testing.T) {
    Foo() (foo, bar string, baz int)
  }`)
 	mock, err := mocks.For(spec)
-	expect(err).To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 	method := mocks.MethodFor(mock, "Foo", method(expect, spec))
 
 	expected, err := format.Source([]byte(`
@@ -80,7 +80,7 @@ func TestMockMethodReturns(t *testing.T) {
    m.FooCalled <- true
    return <-m.FooOutput.Foo, <-m.FooOutput.Bar, <-m.FooOutput.Baz
  }`))
-	expect(err).To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 
 	src := source(expect, "foo", []ast.Decl{method.Ast()}, nil)
 	expect(src).To.Equal(string(expected))
@@ -94,7 +94,7 @@ func TestMockMethodWithBlockingReturn(t *testing.T) {
    Foo()
  }`)
 	mock, err := mocks.For(spec)
-	expect(err).To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 	mock.SetBlockingReturn(true)
 	method := mocks.MethodFor(mock, "Foo", method(expect, spec))
 
@@ -105,7 +105,7 @@ func TestMockMethodWithBlockingReturn(t *testing.T) {
    m.FooCalled <- true
    <-m.FooOutput.BlockReturn
  }`))
-	expect(err).To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 
 	src := source(expect, "foo", []ast.Decl{method.Ast()}, nil)
 	expect(src).To.Equal(string(expected))
@@ -119,7 +119,7 @@ func TestMockMethodUnnamedValues(t *testing.T) {
    Foo(int, string) (string, error)
  }`)
 	mock, err := mocks.For(spec)
-	expect(err).To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 	method := mocks.MethodFor(mock, "Foo", method(expect, spec))
 
 	expected, err := format.Source([]byte(`
@@ -131,7 +131,7 @@ func TestMockMethodUnnamedValues(t *testing.T) {
    m.FooInput.Arg1 <- arg1
    return <-m.FooOutput.Ret0, <-m.FooOutput.Ret1
  }`))
-	expect(err).To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 
 	src := source(expect, "foo", []ast.Decl{method.Ast()}, nil)
 	expect(src).To.Equal(string(expected))
@@ -145,7 +145,7 @@ func TestMockMethodLocalTypes(t *testing.T) {
    Foo(bar bar.Bar, baz func(f Foo) error) (Foo, func() Foo, error)
  }`)
 	mock, err := mocks.For(spec)
-	expect(err).To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 	method := mocks.MethodFor(mock, "Foo", method(expect, spec))
 
 	expected, err := format.Source([]byte(`
@@ -157,7 +157,7 @@ func TestMockMethodLocalTypes(t *testing.T) {
    m.FooInput.Baz <- baz
    return <-m.FooOutput.Ret0, <-m.FooOutput.Ret1, <-m.FooOutput.Ret2
  }`))
-	expect(err).To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 
 	src := source(expect, "foo", []ast.Decl{method.Ast()}, nil)
 	expect(src).To.Equal(string(expected))
@@ -173,7 +173,7 @@ func TestMockMethodLocalTypes(t *testing.T) {
    m.FooInput.Baz <- baz
    return <-m.FooOutput.Ret0, <-m.FooOutput.Ret1, <-m.FooOutput.Ret2
  }`))
-	expect(err).To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 
 	src = source(expect, "foo", []ast.Decl{method.Ast()}, nil)
 	expect(src).To.Equal(string(expected))

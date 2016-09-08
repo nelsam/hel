@@ -21,20 +21,20 @@ func TestLoad(t *testing.T) {
 	}).To.Panic()
 
 	wd, err := os.Getwd()
+	expect(err).To.Be.Nil().Else.FailNow()
 
 	dirs := packages.Load(".")
-	expect(dirs).To.Have.Len(1)
-	expect(err).To.Be.Nil()
+	expect(dirs).To.Have.Len(1).Else.FailNow()
 	expect(dirs[0].Path()).To.Equal(wd)
 	expect(dirs[0].Packages()).To.Have.Keys("packages", "packages_test")
 
 	dirs = packages.Load("github.com/nelsam/hel/mocks")
-	expect(dirs).To.Have.Len(1)
+	expect(dirs).To.Have.Len(1).Else.FailNow()
 	expectedPath := strings.TrimSuffix(wd, "packages") + "mocks"
 	expect(dirs[0].Path()).To.Equal(expectedPath)
 
 	dirs = packages.Load("github.com/nelsam/hel/...")
-	expect(dirs).To.Have.Len(6)
+	expect(dirs).To.Have.Len(6).Else.FailNow()
 
 	name, pkg, err := dirs[0].Import("path/filepath", "")
 	expect(err).To.Be.Nil()

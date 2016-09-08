@@ -34,8 +34,8 @@ func TestGenerate(t *testing.T) {
 	close(mockFinder.DependenciesOutput.Dependencies)
 	mockFinder.ExportedTypesOutput.Types <- types
 	m, err := mocks.Generate(mockFinder)
-	expect(err).To.Be.Nil()
-	expect(m).To.Have.Len(2)
+	expect(err).To.Be.Nil().Else.FailNow()
+	expect(m).To.Have.Len(2).Else.FailNow()
 	expect(m[0]).To.Equal(mockFor(expect, types[0]))
 	expect(m[1]).To.Equal(mockFor(expect, types[1]))
 }
@@ -60,7 +60,7 @@ func TestOutput(t *testing.T) {
 	close(mockFinder.DependenciesOutput.Dependencies)
 	mockFinder.ExportedTypesOutput.Types <- types
 	m, err := mocks.Generate(mockFinder)
-	expect(err).To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 
 	buf := bytes.Buffer{}
 	m.Output("foo", "test/without_imports", 100, &buf)
@@ -136,7 +136,7 @@ func TestOutput(t *testing.T) {
   return <-m.BaconOutput.Ret0
  }
  `))
-	expect(err).To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 	expect(buf.String()).To.Equal(string(expected))
 
 	m.PrependLocalPackage("foo")
@@ -212,7 +212,7 @@ func TestOutput(t *testing.T) {
   return <-m.BaconOutput.Ret0
  }
  `))
-	expect(err).To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 	expect(buf.String()).To.Equal(string(expected))
 
 	m.SetBlockingReturn(true)
@@ -293,7 +293,7 @@ func TestOutput(t *testing.T) {
   return <-m.BaconOutput.Ret0
  }
  `))
-	expect(err).To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 	expect(buf.String()).To.Equal(string(expected))
 }
 
@@ -329,7 +329,7 @@ func TestOutput_Dependencies(t *testing.T) {
 	mockFinder.ExportedTypesOutput.Types <- typs
 	mockFinder.DependenciesOutput.Dependencies <- deps
 	m, err := mocks.Generate(mockFinder)
-	expect(err).To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 
 	buf := bytes.Buffer{}
 	m.Output("foo", "test/without_imports", 100, &buf)
@@ -403,7 +403,7 @@ func TestOutput_Dependencies(t *testing.T) {
   return <-m.BazOutput.Ret0
  }
  `))
-	expect(err).To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 	expect(buf.String()).To.Equal(string(expected))
 }
 
@@ -427,7 +427,7 @@ func TestOutputWithPackageInputs(t *testing.T) {
 	close(mockFinder.DependenciesOutput.Dependencies)
 	mockFinder.ExportedTypesOutput.Types <- types
 	m, err := mocks.Generate(mockFinder)
-	expect(err).To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 
 	buf := bytes.Buffer{}
 	m.Output("foo", "test/with_imports", 100, &buf)
@@ -506,7 +506,7 @@ func TestOutputWithPackageInputs(t *testing.T) {
   return <-m.BaconOutput.Ret0
  }
  `))
-	expect(err).To.Be.Nil()
+	expect(err).To.Be.Nil().Else.FailNow()
 	expect(buf.String()).To.Equal(string(expected))
 }
 
