@@ -137,6 +137,13 @@ func (m Method) prependTypePackage(name string, typ ast.Expr) ast.Expr {
 		m.prependPackage(name, src.Params)
 		m.prependPackage(name, src.Results)
 		return src
+	case *ast.ArrayType:
+		src.Elt = m.prependTypePackage(name, src.Elt)
+		return src
+	case *ast.MapType:
+		src.Key = m.prependTypePackage(name, src.Key)
+		src.Value = m.prependTypePackage(name, src.Value)
+		return src
 	default:
 		return typ
 	}

@@ -178,3 +178,30 @@ func TestMockMethodLocalTypes(t *testing.T) {
 	src = source(expect, "foo", []ast.Decl{method.Ast()}, nil)
 	expect(src).To.Equal(string(expected))
 }
+
+func TestMockMethodLocalTypeNesting(t *testing.T) {
+	expect := expect.New(t)
+
+	spec := typeSpec(expect, `
+ type Foo interface {
+   Foo(bar []Bar, bacon map[Foo]Bar) (baz []Baz, eggs map[Foo]Bar)
+ }`)
+	mock, err := mocks.For(spec)
+	expect(err).To.Be.Nil().Else.FailNow()
+	method := mocks.MethodFor(mock, "Foo", method(expect, spec))
+	method.PrependLocalPackage("foo")
+
+	expected, err := format.Source([]byte(`
+ package foo
+
+ func (m *mockFoo) Foo(bar []foo.Bar, bacon map[foo.Foo]foo.Bar) (baz []foo.Baz, eggs map[foo.Foo]foo.Bar) {
+   m.FooCalled <- true
+   m.FooInput.Bar <- bar
+   m.FooInput.Bacon <- bacon
+   return <-m.FooOutput.Baz, <-m.FooOutput.Eggs
+ }`))
+	expect(err).To.Be.Nil().Else.FailNow()
+
+	src := source(expect, "foo", []ast.Decl{method.Ast()}, nil)
+	expect(src).To.Equal(string(expected))
+}
