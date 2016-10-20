@@ -13,8 +13,9 @@ import (
 )
 
 const (
-	inputFmt  = "arg%d"
-	outputFmt = "ret%d"
+	inputFmt     = "arg%d"
+	outputFmt    = "ret%d"
+	receiverName = "m"
 )
 
 type Method struct {
@@ -44,7 +45,7 @@ func (m Method) recv() *ast.FieldList {
 	return &ast.FieldList{
 		List: []*ast.Field{
 			{
-				Names: []*ast.Ident{{Name: "m"}},
+				Names: []*ast.Ident{{Name: receiverName}},
 				Type: &ast.StarExpr{
 					X: &ast.Ident{Name: m.receiver.Name()},
 				},
@@ -58,7 +59,7 @@ func (m Method) sendOn(receiver string, fields ...string) *ast.SendStmt {
 }
 
 func (m Method) called() ast.Stmt {
-	stmt := m.sendOn("m", m.name+"Called")
+	stmt := m.sendOn(receiverName, m.name+"Called")
 	stmt.Value = &ast.Ident{Name: "true"}
 	return stmt
 }
@@ -68,6 +69,9 @@ func (m Method) params() []*ast.Field {
 		if f.Names == nil {
 			// altering the field directly is okay here, since it's needed anyway
 			f.Names = []*ast.Ident{{Name: fmt.Sprintf(inputFmt, idx)}}
+		}
+		if f.Names[0].Name == receiverName {
+			f.Names[0].Name += "_"
 		}
 	}
 	return m.implements.Params.List
@@ -102,9 +106,14 @@ func (m Method) results() []*ast.Field {
 
 func (m Method) inputs() (stmts []ast.Stmt) {
 	for _, input := range m.params() {
-		for _, name := range input.Names {
-			stmt := m.sendOn("m", m.name+"Input", strings.Title(name.String()))
-			stmt.Value = &ast.Ident{Name: name.String()}
+		for _, n := range input.Names {
+			// Undo our hack to avoid name collisions with the receiver.
+			name := n.Name
+			if name == receiverName+"_" {
+				name = receiverName
+			}
+			stmt := m.sendOn(receiverName, m.name+"Input", strings.Title(name))
+			stmt.Value = &ast.Ident{Name: n.Name}
 			stmts = append(stmts, stmt)
 		}
 	}
@@ -156,7 +165,7 @@ func (m Method) recvFrom(receiver string, fields ...string) *ast.UnaryExpr {
 func (m Method) returnsExprs() (exprs []ast.Expr) {
 	for _, output := range m.results() {
 		for _, name := range output.Names {
-			exprs = append(exprs, m.recvFrom("m", m.name+"Output", strings.Title(name.String())))
+			exprs = append(exprs, m.recvFrom(receiverName, m.name+"Output", strings.Title(name.String())))
 		}
 	}
 	return exprs

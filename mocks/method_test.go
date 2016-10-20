@@ -205,3 +205,27 @@ func TestMockMethodLocalTypeNesting(t *testing.T) {
 	src := source(expect, "foo", []ast.Decl{method.Ast()}, nil)
 	expect(src).To.Equal(string(expected))
 }
+
+func TestMockMethodReceiverNameConflicts(t *testing.T) {
+	expect := expect.New(t)
+
+	spec := typeSpec(expect, `
+ type Foo interface {
+         Foo(m string)
+ }`)
+	mock, err := mocks.For(spec)
+	expect(err).To.Be.Nil().Else.FailNow()
+	method := mocks.MethodFor(mock, "Foo", method(expect, spec))
+
+	expected, err := format.Source([]byte(`
+ package foo
+
+ func (m *mockFoo) Foo(m_ string) {
+   m.FooCalled <- true
+   m.FooInput.M <- m_
+ }`))
+	expect(err).To.Be.Nil().Else.FailNow()
+
+	src := source(expect, "foo", []ast.Decl{method.Ast()}, nil)
+	expect(src).To.Equal(string(expected))
+}
