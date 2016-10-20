@@ -303,17 +303,46 @@ func TestOutput_Dependencies(t *testing.T) {
 	typs := []*ast.TypeSpec{
 		typeSpec(expect, `
   type Bar interface {
-   Foo(foo string) Foo
+    Foo(foo string) (Foo, b.Foo)
+  }`),
+		typeSpec(expect, `
+  type Foo interface {
+    Foo() string
   }`),
 	}
 
-	deps := []types.Dependency{
+	barDeps := []types.Dependency{
+		// We shouldn't see duplicates of types we're
+		// already mocking.
 		{
 			Type: typeSpec(expect, `
 			type Foo interface{
 				Foo() string
 			}`),
 		},
+		// Different package names should have the type
+		// name altered.
+		{
+			PkgName: "b",
+			Type: typeSpec(expect, `
+			type Foo interface{
+				Foo() string
+			}`),
+		},
+		// Different types entirely should be supported.
+		{
+			PkgPath: "some/path/to/foo",
+			PkgName: "baz",
+			Type: typeSpec(expect, `
+			type Baz interface {
+				Baz() Baz
+			}
+			`),
+		},
+	}
+	fooDeps := []types.Dependency{
+		// We shouldn't see duplicate dependencies from
+		// previous types, either.
 		{
 			PkgPath: "some/path/to/foo",
 			PkgName: "baz",
@@ -327,7 +356,8 @@ func TestOutput_Dependencies(t *testing.T) {
 
 	mockFinder := newMockTypeFinder()
 	mockFinder.ExportedTypesOutput.Types <- typs
-	mockFinder.DependenciesOutput.Dependencies <- deps
+	mockFinder.DependenciesOutput.Dependencies <- barDeps
+	mockFinder.DependenciesOutput.Dependencies <- fooDeps
 	m, err := mocks.Generate(mockFinder)
 	expect(err).To.Be.Nil().Else.FailNow()
 
@@ -347,10 +377,11 @@ func TestOutput_Dependencies(t *testing.T) {
  type mockBar struct {
   FooCalled chan bool
   FooInput struct {
-   Foo chan string
+    Foo chan string
   }
   FooOutput struct {
-   Ret0 chan Foo
+    Ret0 chan Foo
+    Ret1 chan b.Foo
   }
  }
 
@@ -359,12 +390,13 @@ func TestOutput_Dependencies(t *testing.T) {
   m.FooCalled = make(chan bool, 100)
   m.FooInput.Foo = make(chan string, 100)
   m.FooOutput.Ret0 = make(chan Foo, 100)
+  m.FooOutput.Ret1 = make(chan b.Foo, 100)
   return m
  }
- func (m *mockBar) Foo(foo string) Foo {
+ func (m *mockBar) Foo(foo string) (Foo, b.Foo) {
   m.FooCalled <- true
   m.FooInput.Foo <- foo
-  return <-m.FooOutput.Ret0
+  return <-m.FooOutput.Ret0, <-m.FooOutput.Ret1
  }
 
  type mockFoo struct {
@@ -381,6 +413,24 @@ func TestOutput_Dependencies(t *testing.T) {
   return m
  }
  func (m *mockFoo) Foo() string {
+  m.FooCalled <- true
+  return <-m.FooOutput.Ret0
+ }
+
+ type mockBFoo struct {
+  FooCalled chan bool
+  FooOutput struct {
+   Ret0 chan string
+  }
+ }
+
+ func newMockBFoo() *mockBFoo {
+  m := &mockBFoo{}
+  m.FooCalled = make(chan bool, 100)
+  m.FooOutput.Ret0 = make(chan string, 100)
+  return m
+ }
+ func (m *mockBFoo) Foo() string {
   m.FooCalled <- true
   return <-m.FooOutput.Ret0
  }

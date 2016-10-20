@@ -139,6 +139,7 @@ func Generate(finder TypeFinder) (Mocks, error) {
 			deps = append(deps, finder.Dependencies(inter)...)
 		}
 	}
+	deps = deDupe(typs, deps)
 	m := make(Mocks, 0, len(typs))
 	for _, typ := range typs {
 		newMock, err := For(typ)
@@ -156,4 +157,52 @@ func Generate(finder TypeFinder) (Mocks, error) {
 		m = append(m, newMock)
 	}
 	return m, nil
+}
+
+func deDupe(typs []*ast.TypeSpec, deps []types.Dependency) []types.Dependency {
+	for _, typ := range typs {
+		for i := 0; i < len(deps); i++ {
+			if deps[i].Type.Name.Name != typ.Name.Name {
+				continue
+			}
+			if deps[i].PkgName == "" {
+				deps = append(deps[:i], deps[i+1:]...)
+				i--
+				continue
+			}
+			deps[i] = separate(deps[i], typ)
+		}
+	}
+	for i := 0; i < len(deps); i++ {
+		for j := i + 1; j < len(deps); j++ {
+			if equal(deps[i], deps[j]) {
+				deps = append(deps[:j], deps[j+1:]...)
+				j--
+				continue
+			}
+			deps[j] = separate(deps[j], deps[i].Type)
+		}
+	}
+	return deps
+}
+
+func equal(a, b types.Dependency) bool {
+	if a.PkgName != b.PkgName {
+		return false
+	}
+	if a.Type.Name.Name != b.Type.Name.Name {
+		return false
+	}
+	return true
+}
+
+func separate(dep types.Dependency, from *ast.TypeSpec) types.Dependency {
+	if dep.Type.Name.Name != from.Name.Name {
+		return dep
+	}
+	pkgTitle := strings.Title(dep.PkgName)
+	if !strings.HasSuffix(dep.Type.Name.Name, pkgTitle) {
+		dep.Type.Name.Name = pkgTitle + dep.Type.Name.Name
+	}
+	return dep
 }
