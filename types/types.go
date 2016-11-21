@@ -13,6 +13,20 @@ import (
 	"unicode"
 )
 
+var (
+	// errorMethod is the type of the Error method on error types.
+	// It's defined here for any interface types that embed error.
+	errorMethod = &ast.Field{
+		Names: []*ast.Ident{{Name: "Error"}},
+		Type: &ast.FuncType{
+			Params: &ast.FieldList{},
+			Results: &ast.FieldList{
+				List: []*ast.Field{{Type: &ast.Ident{Name: "string"}}},
+			},
+		},
+	}
+)
+
 // A GoDir is a type that represents a directory of Go files.
 type GoDir interface {
 	Path() (path string)
@@ -387,8 +401,11 @@ func findAnonMethods(ident *ast.Ident, withSpecs []*ast.TypeSpec, withImports []
 		}
 	}
 	if spec == nil {
-		// TODO: do something nicer with this error.
-		panic(fmt.Errorf("Can't find anonymous type %s", ident.Name))
+		if ident.Name != "error" {
+			// TODO: do something nicer with this error.
+			panic(fmt.Errorf("Can't find anonymous type %s", ident.Name))
+		}
+		return []*ast.Field{errorMethod}
 	}
 	anon := spec.Type.(*ast.InterfaceType)
 	flatten(anon, withSpecs, withImports, dir)

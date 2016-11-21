@@ -294,6 +294,41 @@ func TestAliasedImportedDependencies(t *testing.T) {
 	expect(names).To.Equal(map[string]bool{"Foo": true, "Bar": true})
 }
 
+// TestAnonymousError is testing the only case (as of go 1.7) where
+// a builtin is an interface type.
+func TestAnonymousError(t *testing.T) {
+	expect := expect.New(t)
+
+	mockGoDir := newMockGoDir()
+	mockGoDir.PathOutput.Path <- "/some/path"
+	mockGoDir.PackagesOutput.Packages <- map[string]*ast.Package{
+		"foo": {
+			Name: "foo",
+			Files: map[string]*ast.File{
+				"foo.go": parse(expect, `
+    type Foo interface{
+        error
+    }`),
+			},
+		},
+	}
+	found := types.Load(mockGoDir)
+	expect(found).To.Have.Len(1).Else.FailNow()
+
+	typs := found[0].ExportedTypes()
+	expect(typs).To.Have.Len(1).Else.FailNow()
+
+	spec := typs[0]
+	expect(spec).Not.To.Be.Nil().Else.FailNow()
+
+	inter := spec.Type.(*ast.InterfaceType)
+	expect(inter.Methods.List).To.Have.Len(1).Else.FailNow()
+	err := inter.Methods.List[0]
+	expect(err.Names[0].String()).To.Equal("Error")
+	_, isFunc := err.Type.(*ast.FuncType)
+	expect(isFunc).To.Be.Ok()
+}
+
 func TestAnonymousLocalTypes(t *testing.T) {
 	expect := expect.New(t)
 
