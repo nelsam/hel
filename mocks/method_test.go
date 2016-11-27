@@ -34,6 +34,16 @@ func TestMockSimpleMethod(t *testing.T) {
 
 	src := source(expect, "foo", []ast.Decl{method.Ast()}, nil)
 	expect(src).To.Equal(string(expected))
+
+	fields := method.Fields()
+	expect(fields).To.Have.Len(1).Else.FailNow()
+
+	expect(fields[0].Names[0].Name).To.Equal("FooCalled")
+	ch, ok := fields[0].Type.(*ast.ChanType)
+	expect(ok).To.Be.Ok().Else.FailNow()
+	expect(ch.Dir).To.Equal(ast.SEND | ast.RECV)
+	ident, ok := ch.Value.(*ast.Ident)
+	expect(ident.Name).To.Equal("bool")
 }
 
 func TestMockMethodParams(t *testing.T) {
@@ -60,6 +70,39 @@ func TestMockMethodParams(t *testing.T) {
 
 	src := source(expect, "foo", []ast.Decl{method.Ast()}, nil)
 	expect(src).To.Equal(string(expected))
+
+	fields := method.Fields()
+	expect(fields).To.Have.Len(2)
+
+	expect(fields[0].Names[0].Name).To.Equal("FooCalled")
+	ch, ok := fields[0].Type.(*ast.ChanType)
+	expect(ok).To.Be.Ok().Else.FailNow()
+	expect(ch.Dir).To.Equal(ast.SEND | ast.RECV)
+	ident, ok := ch.Value.(*ast.Ident)
+	expect(ident.Name).To.Equal("bool")
+
+	expect(fields[1].Names[0].Name).To.Equal("FooInput")
+	input, ok := fields[1].Type.(*ast.StructType)
+	expect(ok).To.Be.Ok().Else.FailNow()
+	expect(input.Fields.List).To.Have.Len(2).Else.FailNow()
+
+	fooBar := input.Fields.List[0]
+	expect(fooBar.Names).To.Have.Len(2).Else.FailNow()
+	expect(fooBar.Names[0].Name).To.Equal("Foo")
+	expect(fooBar.Names[1].Name).To.Equal("Bar")
+	ch, ok = fooBar.Type.(*ast.ChanType)
+	expect(ok).To.Be.Ok().Else.FailNow()
+	expect(ch.Dir).To.Equal(ast.SEND | ast.RECV)
+	ident, ok = ch.Value.(*ast.Ident)
+	expect(ident.Name).To.Equal("string")
+
+	baz := input.Fields.List[1]
+	expect(baz.Names[0].Name).To.Equal("Baz")
+	ch, ok = baz.Type.(*ast.ChanType)
+	expect(ok).To.Be.Ok().Else.FailNow()
+	expect(ch.Dir).To.Equal(ast.SEND | ast.RECV)
+	ident, ok = ch.Value.(*ast.Ident)
+	expect(ident.Name).To.Equal("int")
 }
 
 func TestMockMethodReturns(t *testing.T) {
@@ -84,6 +127,39 @@ func TestMockMethodReturns(t *testing.T) {
 
 	src := source(expect, "foo", []ast.Decl{method.Ast()}, nil)
 	expect(src).To.Equal(string(expected))
+
+	fields := method.Fields()
+	expect(fields).To.Have.Len(2)
+
+	expect(fields[0].Names[0].Name).To.Equal("FooCalled")
+	ch, ok := fields[0].Type.(*ast.ChanType)
+	expect(ok).To.Be.Ok().Else.FailNow()
+	expect(ch.Dir).To.Equal(ast.SEND | ast.RECV)
+	ident, ok := ch.Value.(*ast.Ident)
+	expect(ident.Name).To.Equal("bool")
+
+	expect(fields[1].Names[0].Name).To.Equal("FooOutput")
+	input, ok := fields[1].Type.(*ast.StructType)
+	expect(ok).To.Be.Ok().Else.FailNow()
+	expect(input.Fields.List).To.Have.Len(2).Else.FailNow()
+
+	fooBar := input.Fields.List[0]
+	expect(fooBar.Names).To.Have.Len(2).Else.FailNow()
+	expect(fooBar.Names[0].Name).To.Equal("Foo")
+	expect(fooBar.Names[1].Name).To.Equal("Bar")
+	ch, ok = fooBar.Type.(*ast.ChanType)
+	expect(ok).To.Be.Ok().Else.FailNow()
+	expect(ch.Dir).To.Equal(ast.SEND | ast.RECV)
+	ident, ok = ch.Value.(*ast.Ident)
+	expect(ident.Name).To.Equal("string")
+
+	baz := input.Fields.List[1]
+	expect(baz.Names[0].Name).To.Equal("Baz")
+	ch, ok = baz.Type.(*ast.ChanType)
+	expect(ok).To.Be.Ok().Else.FailNow()
+	expect(ch.Dir).To.Equal(ast.SEND | ast.RECV)
+	ident, ok = ch.Value.(*ast.Ident)
+	expect(ident.Name).To.Equal("int")
 }
 
 func TestMockMethodWithBlockingReturn(t *testing.T) {

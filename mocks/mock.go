@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
-	"strconv"
 	"strings"
 	"unicode"
 )
@@ -94,60 +93,6 @@ func (m Mock) Ast(chanSize int) []ast.Decl {
 	return decls
 }
 
-func (m Mock) makeChan(typ ast.Expr, size int) *ast.CallExpr {
-	switch src := typ.(type) {
-	case *ast.ChanType:
-		switch src.Dir {
-		case ast.SEND, ast.RECV:
-			typ = &ast.ParenExpr{X: src}
-		}
-	case *ast.Ellipsis:
-		// The actual value of variadic types is a slice
-		typ = &ast.ArrayType{Elt: src.Elt}
-	}
-	return &ast.CallExpr{
-		Fun: &ast.Ident{Name: "make"},
-		Args: []ast.Expr{
-			&ast.ChanType{Dir: ast.SEND | ast.RECV, Value: typ},
-			&ast.BasicLit{Kind: token.INT, Value: strconv.Itoa(size)},
-		},
-	}
-}
-
-func (m Mock) paramChanInit(method Method, chanSize int) []ast.Stmt {
-	return m.typeChanInit(method.name+"Input", method.params(), chanSize)
-}
-
-func (m Mock) returnChanInit(method Method, chanSize int) []ast.Stmt {
-	return m.typeChanInit(method.name+"Output", method.results(), chanSize)
-}
-
-func (m Mock) typeChanInit(fieldName string, fields []*ast.Field, chanSize int) (inputInits []ast.Stmt) {
-	for _, field := range fields {
-		for _, name := range field.Names {
-			inputInits = append(inputInits, &ast.AssignStmt{
-				Lhs: []ast.Expr{selectors("m", fieldName, strings.Title(name.String()))},
-				Tok: token.ASSIGN,
-				Rhs: []ast.Expr{m.makeChan(field.Type, chanSize)},
-			})
-		}
-	}
-	return inputInits
-}
-
-func (m Mock) chanInit(method Method, chanSize int) []ast.Stmt {
-	stmts := []ast.Stmt{
-		&ast.AssignStmt{
-			Lhs: []ast.Expr{selectors("m", method.name+"Called")},
-			Tok: token.ASSIGN,
-			Rhs: []ast.Expr{m.makeChan(&ast.Ident{Name: "bool"}, chanSize)},
-		},
-	}
-	stmts = append(stmts, m.paramChanInit(method, chanSize)...)
-	stmts = append(stmts, m.returnChanInit(method, chanSize)...)
-	return stmts
-}
-
 func (m Mock) constructorBody(chanSize int) []ast.Stmt {
 	structAlloc := &ast.AssignStmt{
 		Lhs: []ast.Expr{&ast.Ident{Name: "m"}},
@@ -156,75 +101,16 @@ func (m Mock) constructorBody(chanSize int) []ast.Stmt {
 	}
 	stmts := []ast.Stmt{structAlloc}
 	for _, method := range m.Methods() {
-		stmts = append(stmts, m.chanInit(method, chanSize)...)
+		stmts = append(stmts, method.chanInit(chanSize)...)
 	}
 	stmts = append(stmts, &ast.ReturnStmt{Results: []ast.Expr{&ast.Ident{Name: "m"}}})
 	return stmts
 }
 
-func (m Mock) chanStruct(list []*ast.Field) *ast.StructType {
-	typ := &ast.StructType{Fields: &ast.FieldList{}}
-	for _, f := range list {
-		chanValType := f.Type
-		switch src := chanValType.(type) {
-		case *ast.ChanType:
-			// Receive-only channels require parens, and it seems unfair to leave
-			// out send-only channels.
-			switch src.Dir {
-			case ast.SEND, ast.RECV:
-				chanValType = &ast.ParenExpr{X: src}
-			}
-		case *ast.Ellipsis:
-			// The actual value of variadic types is a slice
-			chanValType = &ast.ArrayType{Elt: src.Elt}
-		}
-		names := make([]*ast.Ident, 0, len(f.Names))
-		for _, name := range f.Names {
-			newName := &ast.Ident{}
-			*newName = *name
-			names = append(names, newName)
-			newName.Name = strings.Title(newName.Name)
-		}
-		typ.Fields.List = append(typ.Fields.List, &ast.Field{
-			Names: names,
-			Type: &ast.ChanType{
-				Dir:   ast.SEND | ast.RECV,
-				Value: chanValType,
-			},
-		})
-	}
-	return typ
-}
-
-func (m Mock) methodTypes(method Method) []*ast.Field {
-	fields := []*ast.Field{
-		{
-			Names: []*ast.Ident{{Name: method.name + "Called"}},
-			Type: &ast.ChanType{
-				Dir:   ast.SEND | ast.RECV,
-				Value: &ast.Ident{Name: "bool"},
-			},
-		},
-	}
-	if len(method.params()) > 0 {
-		fields = append(fields, &ast.Field{
-			Names: []*ast.Ident{{Name: method.name + "Input"}},
-			Type:  m.chanStruct(method.params()),
-		})
-	}
-	if len(method.results()) > 0 {
-		fields = append(fields, &ast.Field{
-			Names: []*ast.Ident{{Name: method.name + "Output"}},
-			Type:  m.chanStruct(method.results()),
-		})
-	}
-	return fields
-}
-
 func (m Mock) structType() *ast.StructType {
 	structType := &ast.StructType{Fields: &ast.FieldList{}}
 	for _, method := range m.Methods() {
-		structType.Fields.List = append(structType.Fields.List, m.methodTypes(method)...)
+		structType.Fields.List = append(structType.Fields.List, method.Fields()...)
 	}
 	return structType
 }
