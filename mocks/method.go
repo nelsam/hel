@@ -301,6 +301,9 @@ func (m Method) prependTypePackage(name string, typ ast.Expr) ast.Expr {
 		src.Key = m.prependTypePackage(name, src.Key)
 		src.Value = m.prependTypePackage(name, src.Value)
 		return src
+	case *ast.StarExpr:
+		src.X = m.prependTypePackage(name, src.X)
+		return src
 	default:
 		return typ
 	}
