@@ -33,16 +33,20 @@ type Dir struct {
 	path string
 }
 
-func Load(pkgPatterns ...string) (dirs []Dir) {
-	pkgPatterns = parsePatterns(pkgPatterns...)
+func Load(pkgPatterns ...string) []Dir {
+	return load(cwd, pkgPatterns...)
+}
+
+func load(fromDir string, pkgPatterns ...string) (dirs []Dir) {
+	pkgPatterns = parsePatterns(fromDir, pkgPatterns...)
 	for _, pkgPattern := range pkgPatterns {
-		pkg, err := build.Import(pkgPattern, cwd, build.AllowBinary)
+		pkg, err := build.Import(pkgPattern, fromDir, build.AllowBinary)
 		if err != nil {
 			panic(err)
 		}
 		dirs = append(dirs, Dir{path: pkg.Dir})
 	}
-	return
+	return dirs
 }
 
 func (d Dir) Path() string {
@@ -57,26 +61,26 @@ func (d Dir) Packages() map[string]*ast.Package {
 	return packages
 }
 
-func (d Dir) Import(path, srcDir string) (string, *ast.Package, error) {
-	pkgInfo, err := build.Import(path, srcDir, 0)
+func (d Dir) Import(path string) (string, *ast.Package, error) {
+	pkgInfo, err := build.Import(path, d.Path(), 0)
 	if err != nil {
 		return "", nil, err
 	}
-	newDir := Load(path)[0]
+	newDir := load(d.Path(), path)[0]
 	if pkg, ok := newDir.Packages()[pkgInfo.Name]; ok {
 		return pkgInfo.Name, pkg, nil
 	}
 	return "", nil, fmt.Errorf("Could not find package %s", path)
 }
 
-func parsePatterns(pkgPatterns ...string) (packages []string) {
+func parsePatterns(fromDir string, pkgPatterns ...string) (packages []string) {
 	for _, pkgPattern := range pkgPatterns {
 		if !strings.HasSuffix(pkgPattern, "...") {
 			packages = append(packages, pkgPattern)
 			continue
 		}
 		parent := strings.TrimSuffix(pkgPattern, "...")
-		parentPkg, err := build.Import(parent, cwd, build.AllowBinary)
+		parentPkg, err := build.Import(parent, fromDir, build.AllowBinary)
 		if err != nil {
 			panic(err)
 		}
@@ -85,7 +89,7 @@ func parsePatterns(pkgPatterns ...string) (packages []string) {
 				return nil
 			}
 			path = strings.Replace(path, parentPkg.Dir, parent, 1)
-			if _, err := build.Import(path, cwd, build.AllowBinary); err != nil {
+			if _, err := build.Import(path, fromDir, build.AllowBinary); err != nil {
 				// This directory doesn't appear to be a go package
 				return nil
 			}

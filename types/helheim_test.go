@@ -5,7 +5,9 @@
 
 package types_test
 
-import "go/ast"
+import (
+	"go/ast"
+)
 
 type mockGoDir struct {
 	PathCalled chan bool
@@ -18,7 +20,7 @@ type mockGoDir struct {
 	}
 	ImportCalled chan bool
 	ImportInput  struct {
-		Path, SrcDir chan string
+		Path chan string
 	}
 	ImportOutput struct {
 		Name chan string
@@ -35,7 +37,6 @@ func newMockGoDir() *mockGoDir {
 	m.PackagesOutput.Packages = make(chan map[string]*ast.Package, 100)
 	m.ImportCalled = make(chan bool, 100)
 	m.ImportInput.Path = make(chan string, 100)
-	m.ImportInput.SrcDir = make(chan string, 100)
 	m.ImportOutput.Name = make(chan string, 100)
 	m.ImportOutput.Pkg = make(chan *ast.Package, 100)
 	m.ImportOutput.Err = make(chan error, 100)
@@ -49,9 +50,8 @@ func (m *mockGoDir) Packages() (packages map[string]*ast.Package) {
 	m.PackagesCalled <- true
 	return <-m.PackagesOutput.Packages
 }
-func (m *mockGoDir) Import(path, srcDir string) (name string, pkg *ast.Package, err error) {
+func (m *mockGoDir) Import(path string) (name string, pkg *ast.Package, err error) {
 	m.ImportCalled <- true
 	m.ImportInput.Path <- path
-	m.ImportInput.SrcDir <- srcDir
 	return <-m.ImportOutput.Name, <-m.ImportOutput.Pkg, <-m.ImportOutput.Err
 }

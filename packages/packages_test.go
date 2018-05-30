@@ -34,18 +34,23 @@ func TestLoad(t *testing.T) {
 	expect(dirs[0].Path()).To.Equal(expectedPath)
 
 	dirs = packages.Load("github.com/nelsam/hel/...")
-	expect(dirs).To.Have.Len(6).Else.FailNow()
+	expect(dirs).To.Have.Len(6)
 
-	name, pkg, err := dirs[0].Import("path/filepath", "")
+	dirs = packages.Load("github.com/nelsam/hel")
+	expect(dirs).To.Have.Len(1).Else.FailNow()
+
+	dir := dirs[0]
+
+	name, pkg, err := dir.Import("path/filepath")
 	expect(err).To.Be.Nil()
 	expect(pkg).Not.To.Be.Nil()
 	expect(name).To.Equal("filepath")
 
-	name, pkg, err = dirs[0].Import(".", wd)
+	name, pkg, err = dir.Import("./packages")
 	expect(err).To.Be.Nil()
 	expect(pkg).Not.To.Be.Nil()
 	expect(name).To.Equal("packages")
 
-	name, pkg, err = dirs[0].Import("../..", wd)
+	name, pkg, err = dir.Import("../..")
 	expect(err).Not.To.Be.Nil()
 }
