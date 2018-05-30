@@ -1,4 +1,4 @@
-[![Build Status](https://drone.io/github.com/nelsam/hel/status.png)](https://drone.io/github.com/nelsam/hel/latest)
+[![Build Status](https://travis-ci.org/nelsam/hel.svg?branch=master)](https://travis-ci.org/nelsam/hel)
 
 # Hel
 
