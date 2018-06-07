@@ -19,12 +19,15 @@ const (
 	receiverName = "m"
 )
 
+// Method represents a method that is being mocked.
 type Method struct {
 	receiver   Mock
 	name       string
 	implements *ast.FuncType
 }
 
+// MethodFor returns a Method representing typ, using receiver as
+// the Method's receiver type and name as the method name.
 func MethodFor(receiver Mock, name string, typ *ast.FuncType) Method {
 	return Method{
 		receiver:   receiver,
@@ -33,6 +36,7 @@ func MethodFor(receiver Mock, name string, typ *ast.FuncType) Method {
 	}
 }
 
+// Ast returns the ast representation of m.
 func (m Method) Ast() *ast.FuncDecl {
 	f := &ast.FuncDecl{}
 	f.Name = &ast.Ident{Name: m.name}
@@ -42,6 +46,8 @@ func (m Method) Ast() *ast.FuncDecl {
 	return f
 }
 
+// Fields returns the fields that need to be a part of the receiver
+// struct for this method.
 func (m Method) Fields() []*ast.Field {
 	fields := []*ast.Field{
 		{
@@ -268,6 +274,9 @@ func (m Method) inputs() (stmts []ast.Stmt) {
 	return stmts
 }
 
+// PrependLocalPackage prepends name as the package name for local types
+// in m's signature.  This is most often used when mocking types that are
+// imported by the local package.
 func (m Method) PrependLocalPackage(name string) {
 	m.prependPackage(name, m.implements.Results)
 	m.prependPackage(name, m.implements.Params)

@@ -5,7 +5,9 @@
 
 package types_test
 
-import "go/ast"
+import (
+	"go/ast"
+)
 
 type mockGoDir struct {
 	PathCalled chan bool
