@@ -51,6 +51,6 @@ func TestLoad(t *testing.T) {
 	expect(pkg).Not.To.Be.Nil()
 	expect(name).To.Equal("packages")
 
-	name, pkg, err = dir.Import("../..")
+	_, _, err = dir.Import("../..")
 	expect(err).Not.To.Be.Nil()
 }
