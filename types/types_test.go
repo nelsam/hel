@@ -215,10 +215,11 @@ func TestImportedDependencies(t *testing.T) {
 	mockGoDir.ImportOutput.Name <- pkgName
 
 	found := types.Load(mockGoDir)
-	expect(mockGoDir.ImportCalled).To.Have.Len(2)
+	expect(found).To.Have.Len(1).Else.FailNow()
+	expect(mockGoDir.ImportCalled).To.Have.Len(2).Else.FailNow()
+
 	expect(<-mockGoDir.ImportInput.Path).To.Equal("some/path/to/foo")
 
-	expect(found).To.Have.Len(1).Else.FailNow()
 	mockables := found[0].ExportedTypes()
 	expect(mockables).To.Have.Len(1)
 

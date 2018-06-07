@@ -31,7 +31,7 @@ var (
 type GoDir interface {
 	Path() (path string)
 	Packages() (packages map[string]*ast.Package)
-	Import(path, srcDir string) (name string, pkg *ast.Package, err error)
+	Import(path string) (name string, pkg *ast.Package, err error)
 }
 
 // A Dependency is a struct containing a package and a dependent
@@ -217,7 +217,7 @@ func loadDependencies(fields *ast.FieldList, available []*ast.TypeSpec, withImpo
 			for _, imp := range withImports {
 				importPath := strings.Trim(imp.Path.Value, `"`)
 				importName := imp.Name.String()
-				pkgName, pkg, err := dir.Import(importPath, "")
+				pkgName, pkg, err := dir.Import(importPath)
 				if err != nil {
 					log.Printf("Error loading dependencies: %s", err)
 					continue
@@ -332,7 +332,7 @@ func findImportedTypes(name *ast.Ident, withImports []*ast.ImportSpec, dir GoDir
 	importName := name.String()
 	for _, imp := range withImports {
 		path := strings.Trim(imp.Path.Value, `"`)
-		name, pkg, err := dir.Import(path, "")
+		name, pkg, err := dir.Import(path)
 		if err != nil {
 			log.Printf("Error loading import: %s", err)
 			continue
