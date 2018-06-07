@@ -1,8 +1,8 @@
-package with_imports
+package withimports
 
 import (
-	"strconv"
 	thisIsFmt "fmt"
+	"strconv"
 )
 
 func toMakeThisCompile() {

@@ -29,10 +29,14 @@ func init() {
 	}
 }
 
+// Dir represents a directory containing go files.
 type Dir struct {
 	path string
 }
 
+// Load looks for directories matching the passed in package patterns
+// and returns Dir values for each directory that can be successfully
+// imported and is found to match one of the patterns.
 func Load(pkgPatterns ...string) []Dir {
 	return load(cwd, pkgPatterns...)
 }
@@ -49,10 +53,12 @@ func load(fromDir string, pkgPatterns ...string) (dirs []Dir) {
 	return dirs
 }
 
+// Path returns the file path to d.
 func (d Dir) Path() string {
 	return d.path
 }
 
+// Packages returns the AST for all packages in d.
 func (d Dir) Packages() map[string]*ast.Package {
 	packages, err := parser.ParseDir(token.NewFileSet(), d.Path(), nil, 0)
 	if err != nil {
@@ -61,6 +67,9 @@ func (d Dir) Packages() map[string]*ast.Package {
 	return packages
 }
 
+// Import imports path from srcDir, then loads the ast for that package.
+// It ensures that the returned ast is for the package that would be
+// imported by an import clause.
 func (d Dir) Import(path string) (string, *ast.Package, error) {
 	pkgInfo, err := build.Import(path, d.Path(), 0)
 	if err != nil {

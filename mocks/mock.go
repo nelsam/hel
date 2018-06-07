@@ -12,12 +12,15 @@ import (
 	"unicode"
 )
 
+// Mock is a mock of an interface type.
 type Mock struct {
 	typeName       string
 	implements     *ast.InterfaceType
 	blockingReturn *bool
 }
 
+// For returns a Mock representing typ.  An error will be returned
+// if a mock cannot be created from typ.
 func For(typ *ast.TypeSpec) (Mock, error) {
 	inter, ok := typ.Type.(*ast.InterfaceType)
 	if !ok {
@@ -32,10 +35,13 @@ func For(typ *ast.TypeSpec) (Mock, error) {
 	return m, nil
 }
 
+// Name returns the type name for m.
 func (m Mock) Name() string {
 	return "mock" + strings.ToUpper(m.typeName[0:1]) + m.typeName[1:]
 }
 
+// Methods returns the methods that need to be created with m
+// as a receiver.
 func (m Mock) Methods() (methods []Method) {
 	for _, method := range m.implements.Methods.List {
 		switch methodType := method.Type.(type) {
@@ -46,16 +52,23 @@ func (m Mock) Methods() (methods []Method) {
 	return
 }
 
+// PrependLocalPackage prepends name as the package name for local types
+// in m's signature.  This is most often used when mocking types that are
+// imported by the local package.
 func (m Mock) PrependLocalPackage(name string) {
 	for _, m := range m.Methods() {
 		m.PrependLocalPackage(name)
 	}
 }
 
+// SetBlockingReturn sets whether or not methods will include a blocking
+// return channel, most often used for testing data races.
 func (m Mock) SetBlockingReturn(blockingReturn bool) {
 	*m.blockingReturn = blockingReturn
 }
 
+// Constructor returns a function AST to construct m.  chanSize will be
+// the buffer size for all channels initialized in the constructor.
 func (m Mock) Constructor(chanSize int) *ast.FuncDecl {
 	decl := &ast.FuncDecl{}
 	typeRunes := []rune(m.Name())
@@ -72,6 +85,7 @@ func (m Mock) Constructor(chanSize int) *ast.FuncDecl {
 	return decl
 }
 
+// Decl returns the declaration AST for m.
 func (m Mock) Decl() *ast.GenDecl {
 	spec := &ast.TypeSpec{}
 	spec.Name = &ast.Ident{Name: m.Name()}
@@ -82,6 +96,7 @@ func (m Mock) Decl() *ast.GenDecl {
 	}
 }
 
+// Ast returns all declaration AST for m.
 func (m Mock) Ast(chanSize int) []ast.Decl {
 	decls := []ast.Decl{
 		m.Decl(),

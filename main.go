@@ -42,7 +42,7 @@ func init() {
 			"guess how much I like mocks.",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) > 0 {
-				fmt.Println("Invalid usage.  Help:\n")
+				fmt.Print("Invalid usage.  Help:\n\n")
 				cmd.HelpFunc()(nil, nil)
 				os.Exit(1)
 			}

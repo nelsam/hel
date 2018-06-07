@@ -1,0 +1,24 @@
+language: go
+
+os:
+- linux
+- osx
+
+go:
+- "1.9.6"
+- "1.10.2"
+- tip
+
+matrix:
+  allow_failures:
+  - go: tip
+
+install:
+- go get golang.org/x/lint/golint
+- go get -t -v -d ./...
+
+script:
+- go vet ./...
+- golint -set_exit_status ./...
+- go test -v -race -parallel 4 ./...
+- go build
