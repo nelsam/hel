@@ -84,6 +84,16 @@ func TestConsistentlyReturn(t *testing.T) {
 		expect(done).To(beNil())
 	})
 
+	o.Spec("it handles nil values correctly", func(expect expectation) {
+		c := make(chan error)
+		done, err := pers.ConsistentlyReturn(c, nil)
+		expect(err).To(not(haveOccurred()))
+		defer done()
+		for i := 0; i < 1000; i++ {
+			expect(<-c).To(equal(nil))
+		}
+	})
+
 	o.Spec("it consistently returns on a channel", func(expect expectation) {
 		c := make(chan int)
 		done, err := pers.ConsistentlyReturn(c, 1)

@@ -40,7 +40,12 @@ func selectCases(mock interface{}, args ...interface{}) ([]reflect.SelectCase, e
 		if len(args) != 1 {
 			return nil, fmt.Errorf("expected 1 argument for %#v; got %d", mock, len(args))
 		}
-		return []reflect.SelectCase{{Dir: reflect.SelectSend, Chan: v, Send: reflect.ValueOf(args[0])}}, nil
+		arg := args[0]
+		argV := reflect.ValueOf(arg)
+		if arg == nil {
+			argV = reflect.Zero(v.Type().Elem())
+		}
+		return []reflect.SelectCase{{Dir: reflect.SelectSend, Chan: v, Send: argV}}, nil
 	case reflect.Struct:
 		if v.NumField() == 0 {
 			return nil, errors.New("cannot consistently return on unsupported type struct{}")
