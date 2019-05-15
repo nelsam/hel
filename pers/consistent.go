@@ -25,8 +25,12 @@ func ConsistentlyReturn(mock interface{}, args ...interface{}) (func(), error) {
 		return nil, err
 	}
 	done := make(chan struct{})
-	go consistentlyReturn(cases, done, args...)
-	return func() { close(done) }, nil
+	exited := make(chan struct{})
+	go consistentlyReturn(cases, done, exited, args...)
+	return func() {
+		close(done)
+		<-exited
+	}, nil
 }
 
 func selectCases(mock interface{}, args ...interface{}) ([]reflect.SelectCase, error) {
@@ -62,7 +66,8 @@ func selectCases(mock interface{}, args ...interface{}) ([]reflect.SelectCase, e
 	}
 }
 
-func consistentlyReturn(cases []reflect.SelectCase, done chan struct{}, args ...interface{}) {
+func consistentlyReturn(cases []reflect.SelectCase, done, exited chan struct{}, args ...interface{}) {
+	defer close(exited)
 	doneIdx := len(cases)
 	cases = append(cases, reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(done)})
 	for {
