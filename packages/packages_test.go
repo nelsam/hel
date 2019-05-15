@@ -34,7 +34,7 @@ func TestLoad(t *testing.T) {
 	expect(dirs[0].Path()).To.Equal(expectedPath)
 
 	dirs = packages.Load("github.com/nelsam/hel/...")
-	expect(dirs).To.Have.Len(6)
+	expect(dirs).To.Have.Len(7)
 
 	dirs = packages.Load("github.com/nelsam/hel")
 	expect(dirs).To.Have.Len(1).Else.FailNow()
