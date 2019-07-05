@@ -20,4 +20,7 @@ var (
 	haveOccurred     = matchers.HaveOccurred
 	beNil            = matchers.BeNil
 	containSubstring = matchers.ContainSubstring
+	chain            = matchers.Chain
+	receive          = matchers.Receive
+	receiveWait      = matchers.ReceiveWait
 )
