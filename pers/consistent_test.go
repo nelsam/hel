@@ -13,17 +13,6 @@ import (
 	"github.com/nelsam/hel/pers"
 	"github.com/poy/onpar"
 	"github.com/poy/onpar/expect"
-	"github.com/poy/onpar/matchers"
-)
-
-type expectation = expect.Expectation
-
-var (
-	equal            = matchers.Equal
-	not              = matchers.Not
-	haveOccurred     = matchers.HaveOccurred
-	beNil            = matchers.BeNil
-	containSubstring = matchers.ContainSubstring
 )
 
 func TestConsistentlyReturn(t *testing.T) {
