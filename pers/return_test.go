@@ -65,14 +65,16 @@ func TestReturn(t *testing.T) {
 		expect(err.Error()).To(containSubstring("expected 2 arguments"))
 	})
 
+	wait := receiveWait(100 * time.Millisecond)
+
 	o.Spec("it handles nil values correctly", func(expect expectation) {
 		c := make(chan error)
 		errs := make(chan error)
 		go func() {
 			errs <- pers.Return(c, nil)
 		}()
-		expect(c).To(chain(receive(receiveWait(100*time.Millisecond)), equal(nil)))
-		expect(errs).To(chain(receive(), not(haveOccurred())))
+		expect(c).To(chain(receive(wait), equal(nil)))
+		expect(errs).To(chain(receive(wait), not(haveOccurred())))
 	})
 
 	o.Spec("it returns on a channel", func(expect expectation) {
@@ -81,8 +83,8 @@ func TestReturn(t *testing.T) {
 		go func() {
 			errs <- pers.Return(c, 1)
 		}()
-		expect(c).To(chain(receive(receiveWait(100*time.Millisecond)), equal(1)))
-		expect(errs).To(chain(receive(), not(haveOccurred())))
+		expect(c).To(chain(receive(wait), equal(1)))
+		expect(errs).To(chain(receive(wait), not(haveOccurred())))
 	})
 
 	o.Spec("it returns on a struct of channels", func(expect expectation) {
@@ -95,9 +97,9 @@ func TestReturn(t *testing.T) {
 		go func() {
 			errs <- pers.Return(v, "foo", true)
 		}()
-		expect(v.Foo).To(chain(receive(receiveWait(100*time.Millisecond)), equal("foo")))
-		expect(v.Bar).To(chain(receive(receiveWait(100*time.Millisecond)), equal(true)))
-		expect(errs).To(chain(receive(), not(haveOccurred())))
+		expect(v.Foo).To(chain(receive(wait), equal("foo")))
+		expect(v.Bar).To(chain(receive(wait), equal(true)))
+		expect(errs).To(chain(receive(wait), not(haveOccurred())))
 	})
 
 }
