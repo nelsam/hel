@@ -55,6 +55,10 @@ func HaveMethodExecuted(name string, opts ...HaveMethodExecutedOption) HaveMetho
 // which has been called.
 func (m HaveMethodExecutedMatcher) Match(v interface{}) (interface{}, error) {
 	mv := reflect.ValueOf(v)
+	method, exists := mv.Type().MethodByName(m.MethodName)
+	if !exists {
+		return v, fmt.Errorf("pers: could not find method '%s' on type %T", m.MethodName, v)
+	}
 	if mv.Kind() == reflect.Ptr {
 		mv = mv.Elem()
 	}
@@ -74,39 +78,174 @@ func (m HaveMethodExecutedMatcher) Match(v interface{}) (interface{}, error) {
 		return v, fmt.Errorf("pers: expected method %s to have been called, but it was not", m.MethodName)
 	}
 	inputField := mv.FieldByName(m.MethodName + "Input")
-	var matches [][]interface{}
+	var calledWith []interface{}
 	for i := 0; i < inputField.NumField(); i++ {
 		fv, ok := inputField.Field(i).Recv()
 		if !ok {
 			return v, fmt.Errorf("pers: field %s is closed; cannot perform matches against this mock", inputField.Type().Field(i).Name)
 		}
-		matches = append(matches, []interface{}{fv.Interface()})
+		calledWith = append(calledWith, fv.Interface())
 	}
 	if len(m.args) == 0 {
 		return v, nil
 	}
-	if len(m.args) != inputField.NumField() {
-		return v, fmt.Errorf("pers: expected %d arguments, but got %d", inputField.NumField(), len(m.args))
-	}
-	matched := true
-	for i, a := range m.args {
-		matches[i] = append(matches[i], a)
-		if matches[i][0] != a {
-			matched = false
+
+	args := append([]interface{}(nil), m.args...)
+	if method.Type.IsVariadic() {
+		lastTypeArg := method.Type.NumIn() - 1
+		lastArg := lastTypeArg - 1 // lastTypeArg is including the receiver as an argument
+		variadic := reflect.MakeSlice(method.Type.In(lastTypeArg), 0, 0)
+		for i := lastArg; i < len(m.args); i++ {
+			variadic = reflect.Append(variadic, reflect.ValueOf(m.args[i]))
 		}
+		args = append(args[:lastArg], variadic.Interface())
+	}
+	if len(args) != len(calledWith) {
+		return v, fmt.Errorf("pers: expected %d arguments, but got %d", len(calledWith), len(args))
+	}
+
+	matched := true
+	var actual, expected []string
+	for i, a := range args {
+		called := calledWith[i]
+		match, a, e := diff(called, a)
+		actual = append(actual, a)
+		expected = append(expected, e)
+		matched = matched && match
 	}
 	if matched {
 		return v, nil
 	}
 	msg := "pers: %s was called with (%s); expected (%s)"
-	var actual, expected []string
-	for _, match := range matches {
+	return v, fmt.Errorf(msg, m.MethodName, strings.Join(actual, ", "), strings.Join(expected, ", "))
+}
+
+func diff(actual, expected interface{}) (matched bool, actualOutput, expectedOutput string) {
+	return diffV(reflect.ValueOf(actual), reflect.ValueOf(expected))
+}
+
+type span struct {
+	start, end int
+}
+
+func diffV(av, ev reflect.Value) (matched bool, actualOutput, expectedOutput string) {
+	if av.Kind() != ev.Kind() {
+		format := ">type mismatch: %#v<"
+		return false, fmt.Sprintf(format, av.Interface()), fmt.Sprintf(format, ev.Interface())
+	}
+	if av.Type().Comparable() {
+		matched := true
 		format := "%#v"
-		if match[0] != match[1] {
+		if av.Interface() != ev.Interface() {
+			matched = false
 			format = ">%#v<"
 		}
-		actual = append(actual, fmt.Sprintf(format, match[0]))
-		expected = append(expected, fmt.Sprintf(format, match[1]))
+		return matched, fmt.Sprintf(format, av.Interface()), fmt.Sprintf(format, ev.Interface())
 	}
-	return v, fmt.Errorf(msg, m.MethodName, strings.Join(actual, ", "), strings.Join(expected, ", "))
+
+	switch av.Interface().(type) {
+	case []rune, []byte:
+		// make almost-string types a little prettier, when possible.
+		if av.Len() != ev.Len() {
+			break // let the default logic handle this
+		}
+
+		strTyp := reflect.TypeOf("")
+		matchSection := true
+		matched := true
+		var outa, oute string
+		for i := 0; i < av.Len(); i++ {
+			match, _, _ := diffV(av.Index(i), ev.Index(i))
+			if !match && matchSection {
+				outa += ">"
+				oute += ">"
+			}
+			if match && !matchSection {
+				outa += "<"
+				oute += "<"
+			}
+			matchSection = match
+			matched = matched && match
+			outa += av.Index(i).Convert(strTyp).Interface().(string)
+			oute += ev.Index(i).Convert(strTyp).Interface().(string)
+		}
+		return matched, outa, oute
+	}
+
+	switch av.Kind() {
+	case reflect.Ptr, reflect.Interface:
+		return diffV(av.Elem(), ev.Elem())
+	case reflect.Slice, reflect.Array:
+		if av.Len() != ev.Len() {
+			// TODO: do a more thorough diff of values
+			format := ">%T(length %d)<"
+			return false, fmt.Sprintf(format, av.Interface(), av.Len()), fmt.Sprintf(format, ev.Interface(), ev.Len())
+		}
+		format := func(parts []string) string {
+			return "[" + strings.Join(parts, ",") + "]"
+		}
+		var aParts, eParts []string
+		matched := true
+		for i := 0; i < av.Len(); i++ {
+			match, a, e := diffV(av.Index(i), ev.Index(i))
+			matched = matched && match
+			aParts = append(aParts, a)
+			eParts = append(eParts, e)
+		}
+		return matched, format(aParts), format(eParts)
+	case reflect.Map:
+		format := func(parts []string) string {
+			return "{" + strings.Join(parts, ",") + "}"
+		}
+		var aParts, eParts []string
+		matched := true
+		for _, kv := range ev.MapKeys() {
+			k := kv.Interface()
+			emv := ev.MapIndex(kv)
+			amv := av.MapIndex(kv)
+			if !amv.IsValid() {
+				aParts = append(aParts, fmt.Sprintf(">missing key %v<", k))
+				eParts = append(eParts, fmt.Sprintf(">%v: %v<", k, emv.Interface()))
+				continue
+			}
+			match, a, e := diffV(amv, emv)
+			matched = matched && match
+			aParts = append(aParts, fmt.Sprintf("%v: %s", k, a))
+			eParts = append(eParts, fmt.Sprintf("%v: %s", k, e))
+		}
+		for _, kv := range av.MapKeys() {
+			// We've already compared all keys that exist in both maps; now we're
+			// just looking for keys that only exist in the actual.
+			k := kv.Interface()
+			if !ev.MapIndex(kv).IsValid() {
+				matched = false
+				aParts = append(aParts, fmt.Sprintf(">extra key %v: %v<", k, av.MapIndex(kv).Interface()))
+				eParts = append(eParts, fmt.Sprintf(">%v: nil<", k))
+				continue
+			}
+		}
+		return matched, format(aParts), format(eParts)
+	case reflect.Struct:
+		if av.Type().Name() != ev.Type().Name() {
+			return false, ">" + av.Type().Name() + "(mismatched types)<", ">" + ev.Type().Name() + "(mismatched types)<"
+		}
+		format := func(parts []string) string {
+			return fmt.Sprintf("%T{\n", av.Interface()) + strings.Join(parts, ",\n") + "}"
+		}
+		var aParts, eParts []string
+		matched := true
+		for i := 0; i < ev.NumField(); i++ {
+			name := ev.Type().Field(i).Name
+			efv := ev.Field(i)
+			afv := av.Field(i)
+			match, a, e := diffV(afv, efv)
+			matched = matched && match
+			aParts = append(aParts, fmt.Sprintf("%s: %s", name, a))
+			eParts = append(eParts, fmt.Sprintf("%s: %s", name, e))
+		}
+		return matched, format(aParts), format(eParts)
+	default:
+		msg := fmt.Sprintf("> UNSUPPORTED: could not compare values of type %T <", av.Interface())
+		return false, msg, msg
+	}
 }

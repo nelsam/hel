@@ -41,12 +41,40 @@ func (m *fakeMock) Foo(arg0 int, arg1 string) error {
 	return <-m.FooOutput.Err
 }
 
+type fakeVariadicMock struct {
+	FooCalled chan struct{}
+	FooInput  struct {
+		Args chan []string
+	}
+}
+
+func newFakeVariadicMock() *fakeVariadicMock {
+	m := &fakeVariadicMock{}
+	m.FooCalled = make(chan struct{}, 100)
+	m.FooInput.Args = make(chan []string, 100)
+	return m
+}
+
+func (m *fakeVariadicMock) Foo(args ...string) {
+	m.FooCalled <- struct{}{}
+	m.FooInput.Args <- args
+}
+
 func TestHaveMethodExecuted(t *testing.T) {
 	o := onpar.New()
 	defer o.Run(t)
 
 	o.BeforeEach(func(t *testing.T) (*testing.T, expectation) {
 		return t, expect.New(t)
+	})
+
+	o.Spec("it fails gracefully if the requested method isn't found", func(t *testing.T, expect expectation) {
+		fm := newFakeMock()
+
+		m := pers.HaveMethodExecuted("Bar")
+		_, err := m.Match(fm)
+		expect(err).To(haveOccurred())
+		expect(err.Error()).To(equal("pers: could not find method 'Bar' on type *pers_test.fakeMock"))
 	})
 
 	o.Spec("it drains a value off of each relevant channel", func(t *testing.T, expect expectation) {
@@ -141,4 +169,13 @@ func TestHaveMethodExecuted(t *testing.T) {
 			expect(err).To(equal(test.err))
 		})
 	}
+
+	o.Spec("it handles variadic arguments", func(t *testing.T, expect expectation) {
+		fm := newFakeVariadicMock()
+		fm.FooCalled <- struct{}{}
+		fm.FooInput.Args <- []string{"foo", "bar"}
+		m := pers.HaveMethodExecuted("Foo", pers.WithArgs("foo", "bar"))
+		_, err := m.Match(fm)
+		expect(err).To(not(haveOccurred()))
+	})
 }
