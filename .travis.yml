@@ -5,13 +5,8 @@ os:
 - osx
 
 go:
-- "1.9.6"
-- "1.10.2"
-- tip
-
-matrix:
-  allow_failures:
-  - go: tip
+- "1.12.x"
+- "1.13.x"
 
 install:
 - go get golang.org/x/lint/golint
