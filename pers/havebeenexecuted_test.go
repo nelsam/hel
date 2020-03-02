@@ -6,6 +6,7 @@ package pers_test
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -178,4 +179,27 @@ func TestHaveMethodExecuted(t *testing.T) {
 		_, err := m.Match(fm)
 		expect(err).To(not(haveOccurred()))
 	})
+}
+
+func ExampleStoreArgs() {
+	// Simulate calling a method on a mock
+	fm := newFakeMock()
+	fm.FooCalled <- struct{}{}
+	fm.FooInput.Arg0 <- 42
+	fm.FooInput.Arg1 <- "foobar"
+
+	// Provide some addresses to store the arguments
+	var (
+		arg0 int
+		arg1 string
+	)
+	m := pers.HaveMethodExecuted("Foo", pers.StoreArgs(&arg0, &arg1))
+	_, err := m.Match(fm)
+	fmt.Println(err)
+	fmt.Println(arg0)
+	fmt.Println(arg1)
+	// Output:
+	// <nil>
+	// 42
+	// foobar
 }

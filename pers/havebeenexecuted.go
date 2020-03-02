@@ -33,12 +33,25 @@ func WithArgs(args ...interface{}) HaveMethodExecutedOption {
 	}
 }
 
+// StoreArgs returns a HaveMethodExecutedOption which stores the arguments passed to
+// the method in the addresses provided.
+//
+// StoreArgs will panic if the values provided are not pointers or cannot store data
+// of the same type as the method arguments.
+func StoreArgs(targets ...interface{}) HaveMethodExecutedOption {
+	return func(m HaveMethodExecutedMatcher) HaveMethodExecutedMatcher {
+		m.saveTo = targets
+		return m
+	}
+}
+
 // HaveMethodExecutedMatcher is a matcher to ensure that a method on a mock was
 // executed.
 type HaveMethodExecutedMatcher struct {
 	MethodName string
 	within     time.Duration
 	args       []interface{}
+	saveTo     []interface{}
 }
 
 // HaveMethodExecuted returns a matcher that asserts that the method referenced
@@ -85,6 +98,10 @@ func (m HaveMethodExecutedMatcher) Match(v interface{}) (interface{}, error) {
 			return v, fmt.Errorf("pers: field %s is closed; cannot perform matches against this mock", inputField.Type().Field(i).Name)
 		}
 		calledWith = append(calledWith, fv.Interface())
+
+		if m.saveTo != nil {
+			reflect.ValueOf(m.saveTo[i]).Elem().Set(fv)
+		}
 	}
 	if len(m.args) == 0 {
 		return v, nil
