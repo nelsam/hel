@@ -8,14 +8,12 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-
-	"github.com/a8m/expect"
 )
 
 const packagePrefix = "package foo\n\n"
 
-func parse(expect func(interface{}) *expect.Expect, code string) *ast.File {
+func parse(expect expectation, code string) *ast.File {
 	f, err := parser.ParseFile(token.NewFileSet(), "", packagePrefix+code, 0)
-	expect(err).To.Be.Nil().Else.FailNow()
+	expect(err).To(not(haveOccurred()))
 	return f
 }

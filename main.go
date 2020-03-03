@@ -66,6 +66,10 @@ func init() {
 			if err != nil {
 				panic(err)
 			}
+			noTestPkg, err := cmd.Flags().GetBool("no-test-package")
+			if err != nil {
+				panic(err)
+			}
 			fmt.Printf("Loading directories matching %s %v", pluralize(packagePatterns, "pattern", "patterns"), packagePatterns)
 			var dirList []packages.Dir
 			progress(func() {
@@ -92,7 +96,7 @@ func init() {
 			fmt.Printf("Generating mocks in output file %s", outputName)
 			progress(func() {
 				for _, typeDir := range typeDirs {
-					mockPath, err := makeMocks(typeDir, outputName, chanSize, blockingReturn)
+					mockPath, err := makeMocks(typeDir, outputName, chanSize, blockingReturn, !noTestPkg)
 					if err != nil {
 						panic(err)
 					}
@@ -114,9 +118,10 @@ func init() {
 		"Also note that, since the types are not exported, you will want the file to end in '_test.go'.")
 	cmd.Flags().IntP("chan-size", "s", 100, "The size of channels used for method calls.")
 	cmd.Flags().BoolP("blocking-return", "b", false, "Always block when returning from mock even if there is no return value.")
+	cmd.Flags().Bool("no-test-package", false, "Generate mocks in the primary package rather than in {pkg}_test")
 }
 
-func makeMocks(types types.Dir, fileName string, chanSize int, blockingReturn bool) (filePath string, err error) {
+func makeMocks(types types.Dir, fileName string, chanSize int, blockingReturn, useTestPkg bool) (filePath string, err error) {
 	mocks, err := mocks.Generate(types)
 	if err != nil {
 		return "", err
@@ -125,7 +130,7 @@ func makeMocks(types types.Dir, fileName string, chanSize int, blockingReturn bo
 		return "", nil
 	}
 	mocks.SetBlockingReturn(blockingReturn)
-	if types.Package() != types.TestPackage() {
+	if useTestPkg {
 		mocks.PrependLocalPackage(types.Package())
 	}
 	filePath = filepath.Join(types.Dir(), fileName)
@@ -134,7 +139,11 @@ func makeMocks(types types.Dir, fileName string, chanSize int, blockingReturn bo
 		return "", err
 	}
 	defer f.Close()
-	return filePath, mocks.Output(types.TestPackage(), types.Dir(), chanSize, f)
+	testPkg := types.Package()
+	if useTestPkg {
+		testPkg += "_test"
+	}
+	return filePath, mocks.Output(testPkg, types.Dir(), chanSize, f)
 }
 
 func progress(f func()) {
