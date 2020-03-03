@@ -6,51 +6,68 @@ package packages_test
 
 import (
 	"os"
-	"strings"
+	"path/filepath"
 	"testing"
 
-	"github.com/a8m/expect"
 	"github.com/nelsam/hel/packages"
+	"github.com/poy/onpar"
+	"github.com/poy/onpar/expect"
+	"github.com/poy/onpar/matchers"
+)
+
+type expectation = expect.Expectation
+
+var (
+	not          = matchers.Not
+	beNil        = matchers.BeNil
+	equal        = matchers.Equal
+	haveLen      = matchers.HaveLen
+	haveOccurred = matchers.HaveOccurred
 )
 
 func TestLoad(t *testing.T) {
-	expect := expect.New(t)
+	o := onpar.New()
+	defer o.Run(t)
 
-	expect(func() {
-		packages.Load("foo")
-	}).To.Panic()
+	o.BeforeEach(func(t *testing.T) expectation {
+		return expect.New(t)
+	})
 
-	wd, err := os.Getwd()
-	expect(err).To.Be.Nil().Else.FailNow()
+	o.Spec("All", func(expect expectation) {
+		wd, err := os.Getwd()
+		expect(err).To(not(haveOccurred()))
 
-	dirs := packages.Load(".")
-	expect(dirs).To.Have.Len(1).Else.FailNow()
-	expect(dirs[0].Path()).To.Equal(wd)
-	expect(dirs[0].Packages()).To.Have.Keys("packages", "packages_test")
+		dirs := packages.Load(".")
+		expect(dirs).To(haveLen(1))
+		expect(dirs[0].Path()).To(equal(filepath.Join(wd)))
+		expect(dirs[0].Package().Name).To(equal("packages"))
 
-	dirs = packages.Load("github.com/nelsam/hel/mocks")
-	expect(dirs).To.Have.Len(1).Else.FailNow()
-	expectedPath := strings.TrimSuffix(wd, "packages") + "mocks"
-	expect(dirs[0].Path()).To.Equal(expectedPath)
+		dirs = packages.Load("github.com/nelsam/hel/mocks")
+		expect(dirs).To(haveLen(1))
+		expect(dirs[0].Path()).To(equal(filepath.Join(filepath.Dir(wd), "mocks")))
 
-	dirs = packages.Load("github.com/nelsam/hel/...")
-	expect(dirs).To.Have.Len(7)
+		dirs = packages.Load("github.com/nelsam/hel/...")
+		expect(dirs).To(haveLen(7))
 
-	dirs = packages.Load("github.com/nelsam/hel")
-	expect(dirs).To.Have.Len(1).Else.FailNow()
+		dirs = packages.Load("github.com/nelsam/hel")
+		expect(dirs).To(haveLen(1))
 
-	dir := dirs[0]
+		_, err = dirs[0].Import("golang.org/x/tools/go/packages")
+		expect(err).To(not(haveOccurred()))
 
-	name, pkg, err := dir.Import("path/filepath")
-	expect(err).To.Be.Nil()
-	expect(pkg).Not.To.Be.Nil()
-	expect(name).To.Equal("filepath")
+		dir := dirs[0]
 
-	name, pkg, err = dir.Import("./packages")
-	expect(err).To.Be.Nil()
-	expect(pkg).Not.To.Be.Nil()
-	expect(name).To.Equal("packages")
+		pkg, err := dir.Import("path/filepath")
+		expect(err).To(not(haveOccurred()))
+		expect(pkg).To(not(beNil()))
+		expect(pkg.Name).To(equal("filepath"))
 
-	_, _, err = dir.Import("../..")
-	expect(err).Not.To.Be.Nil()
+		pkg, err = dir.Import("github.com/nelsam/hel/packages")
+		expect(err).To(not(haveOccurred()))
+		expect(pkg).To(not(beNil()))
+		expect(pkg.Name).To(equal("packages"))
+
+		_, err = dir.Import("../..")
+		expect(err).To(haveOccurred())
+	})
 }

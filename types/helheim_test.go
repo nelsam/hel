@@ -6,7 +6,7 @@
 package types_test
 
 import (
-	"go/ast"
+	"golang.org/x/tools/go/packages"
 )
 
 type mockGoDir struct {
@@ -14,18 +14,17 @@ type mockGoDir struct {
 	PathOutput struct {
 		Path chan string
 	}
-	PackagesCalled chan bool
-	PackagesOutput struct {
-		Packages chan map[string]*ast.Package
+	PackageCalled chan bool
+	PackageOutput struct {
+		Pkg chan *packages.Package
 	}
 	ImportCalled chan bool
 	ImportInput  struct {
 		Path chan string
 	}
 	ImportOutput struct {
-		Name chan string
-		Pkg  chan *ast.Package
-		Err  chan error
+		Pkg chan *packages.Package
+		Err chan error
 	}
 }
 
@@ -33,12 +32,11 @@ func newMockGoDir() *mockGoDir {
 	m := &mockGoDir{}
 	m.PathCalled = make(chan bool, 100)
 	m.PathOutput.Path = make(chan string, 100)
-	m.PackagesCalled = make(chan bool, 100)
-	m.PackagesOutput.Packages = make(chan map[string]*ast.Package, 100)
+	m.PackageCalled = make(chan bool, 100)
+	m.PackageOutput.Pkg = make(chan *packages.Package, 100)
 	m.ImportCalled = make(chan bool, 100)
 	m.ImportInput.Path = make(chan string, 100)
-	m.ImportOutput.Name = make(chan string, 100)
-	m.ImportOutput.Pkg = make(chan *ast.Package, 100)
+	m.ImportOutput.Pkg = make(chan *packages.Package, 100)
 	m.ImportOutput.Err = make(chan error, 100)
 	return m
 }
@@ -46,12 +44,12 @@ func (m *mockGoDir) Path() (path string) {
 	m.PathCalled <- true
 	return <-m.PathOutput.Path
 }
-func (m *mockGoDir) Packages() (packages map[string]*ast.Package) {
-	m.PackagesCalled <- true
-	return <-m.PackagesOutput.Packages
+func (m *mockGoDir) Package() (pkg *packages.Package) {
+	m.PackageCalled <- true
+	return <-m.PackageOutput.Pkg
 }
-func (m *mockGoDir) Import(path string) (name string, pkg *ast.Package, err error) {
+func (m *mockGoDir) Import(path string) (pkg *packages.Package, err error) {
 	m.ImportCalled <- true
 	m.ImportInput.Path <- path
-	return <-m.ImportOutput.Name, <-m.ImportOutput.Pkg, <-m.ImportOutput.Err
+	return <-m.ImportOutput.Pkg, <-m.ImportOutput.Err
 }

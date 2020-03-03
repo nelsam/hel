@@ -11,6 +11,8 @@ import (
 	"regexp"
 	"strings"
 	"unicode"
+
+	"golang.org/x/tools/go/packages"
 )
 
 var (
@@ -30,8 +32,8 @@ var (
 // A GoDir is a type that represents a directory of Go files.
 type GoDir interface {
 	Path() (path string)
-	Packages() (packages map[string]*ast.Package)
-	Import(path string) (name string, pkg *ast.Package, err error)
+	Package() (pkg *packages.Package)
+	Import(path string) (pkg *packages.Package, err error)
 }
 
 // A Dependency is a struct containing a package and a dependent
@@ -47,7 +49,6 @@ type Dependency struct {
 type Dir struct {
 	dir          string
 	pkg          string
-	testPkg      string
 	types        []*ast.TypeSpec
 	dependencies map[*ast.InterfaceType][]Dependency
 }
@@ -68,12 +69,6 @@ func (d Dir) Package() string {
 	return d.pkg
 }
 
-// TestPackage returns the name of d's test package.  It may be the
-// same as d.Package().
-func (d Dir) TestPackage() string {
-	return d.testPkg
-}
-
 // ExportedTypes returns all *ast.TypeSpecs found by d.  Interface
 // types with anonymous interface types will be flattened, for ease of
 // mocking by other logic.
@@ -87,19 +82,10 @@ func (d Dir) Dependencies(typ *ast.InterfaceType) []Dependency {
 	return d.dependencies[typ]
 }
 
-func (d Dir) addPkg(name string, pkg *ast.Package, dir GoDir) Dir {
-	if d.testPkg == "" {
-		// Default for packages that don't have tests yet.
-		d.testPkg = name + "_test"
-	}
-	newTypes, depMap, testsFound := loadPkgTypeSpecs(pkg, dir)
-	if testsFound {
-		// This package already has test files, so this will
-		// always be the test package.
-		d.testPkg = name
-	}
-	if d.pkg == "" || !testsFound {
-		d.pkg = name
+func (d Dir) addPkg(pkg *packages.Package, dir GoDir) Dir {
+	newTypes, depMap := loadPkgTypeSpecs(pkg, dir)
+	if d.pkg == "" {
+		d.pkg = pkg.Name
 	}
 	for inter, deps := range depMap {
 		d.dependencies[inter] = append(d.dependencies[inter], deps...)
@@ -134,12 +120,11 @@ func Load(goDirs ...GoDir) Dirs {
 	typeDirs := make(Dirs, 0, len(goDirs))
 	for _, dir := range goDirs {
 		d := Dir{
+			pkg:          dir.Package().Name,
 			dir:          dir.Path(),
 			dependencies: make(map[*ast.InterfaceType][]Dependency),
 		}
-		for name, pkg := range dir.Packages() {
-			d = d.addPkg(name, pkg, dir)
-		}
+		d = d.addPkg(dir.Package(), dir)
 		typeDirs = append(typeDirs, d)
 	}
 	return typeDirs
@@ -217,13 +202,13 @@ func loadDependencies(fields *ast.FieldList, available []*ast.TypeSpec, withImpo
 			for _, imp := range withImports {
 				importPath := strings.Trim(imp.Path.Value, `"`)
 				importName := imp.Name.String()
-				pkgName, pkg, err := dir.Import(importPath)
+				pkg, err := dir.Import(importPath)
 				if err != nil {
 					log.Printf("Error loading dependencies: %s", err)
 					continue
 				}
 				if imp.Name == nil {
-					importName = pkgName
+					importName = pkg.Name
 				}
 				if selectorName != importName {
 					continue
@@ -231,7 +216,7 @@ func loadDependencies(fields *ast.FieldList, available []*ast.TypeSpec, withImpo
 				d := Dir{
 					dependencies: make(map[*ast.InterfaceType][]Dependency),
 				}
-				d = d.addPkg(importName, pkg, dir)
+				d = d.addPkg(pkg, dir)
 				for _, typ := range d.ExportedTypes() {
 					if typ.Name.String() == src.Sel.String() {
 						if _, ok := typ.Type.(*ast.InterfaceType); ok {
@@ -253,7 +238,7 @@ func loadDependencies(fields *ast.FieldList, available []*ast.TypeSpec, withImpo
 	return dependencies
 }
 
-func loadPkgTypeSpecs(pkg *ast.Package, dir GoDir) (specs []*ast.TypeSpec, depMap map[*ast.InterfaceType][]Dependency, hasTests bool) {
+func loadPkgTypeSpecs(pkg *packages.Package, dir GoDir) (specs []*ast.TypeSpec, depMap map[*ast.InterfaceType][]Dependency) {
 	depMap = make(map[*ast.InterfaceType][]Dependency)
 	imports := make(map[*ast.TypeSpec][]*ast.ImportSpec)
 	defer func() {
@@ -265,11 +250,7 @@ func loadPkgTypeSpecs(pkg *ast.Package, dir GoDir) (specs []*ast.TypeSpec, depMa
 			depMap[inter] = dependencies(inter, specs, imports[spec], dir)
 		}
 	}()
-	for name, f := range pkg.Files {
-		if strings.HasSuffix(name, "_test.go") {
-			hasTests = true
-			continue
-		}
+	for _, f := range pkg.Syntax {
 		fileImports := f.Imports
 		fileSpecs := loadFileTypeSpecs(f)
 		for _, spec := range fileSpecs {
@@ -285,7 +266,7 @@ func loadPkgTypeSpecs(pkg *ast.Package, dir GoDir) (specs []*ast.TypeSpec, depMa
 
 		specs = append(specs, fileSpecs...)
 	}
-	return specs, depMap, hasTests
+	return specs, depMap
 }
 
 func loadFileTypeSpecs(f *ast.File) (specs []*ast.TypeSpec) {
@@ -332,18 +313,19 @@ func findImportedTypes(name *ast.Ident, withImports []*ast.ImportSpec, dir GoDir
 	importName := name.String()
 	for _, imp := range withImports {
 		path := strings.Trim(imp.Path.Value, `"`)
-		name, pkg, err := dir.Import(path)
+		pkg, err := dir.Import(path)
 		if err != nil {
 			log.Printf("Error loading import: %s", err)
 			continue
 		}
+		name := pkg.Name
 		if imp.Name != nil {
 			name = imp.Name.String()
 		}
 		if name != importName {
 			continue
 		}
-		typs, deps, _ := loadPkgTypeSpecs(pkg, dir)
+		typs, deps := loadPkgTypeSpecs(pkg, dir)
 		addSelector(typs, importName)
 		return typs, deps
 	}
