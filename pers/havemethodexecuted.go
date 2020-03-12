@@ -91,6 +91,10 @@ func (m HaveMethodExecutedMatcher) Match(v interface{}) (interface{}, error) {
 		return v, fmt.Errorf("pers: expected method %s to have been called, but it was not", m.MethodName)
 	}
 	inputField := mv.FieldByName(m.MethodName + "Input")
+	if !inputField.IsValid() {
+		return v, nil
+	}
+
 	var calledWith []interface{}
 	for i := 0; i < inputField.NumField(); i++ {
 		fv, ok := inputField.Field(i).Recv()
