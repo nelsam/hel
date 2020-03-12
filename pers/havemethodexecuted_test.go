@@ -24,6 +24,7 @@ type fakeMock struct {
 	FooOutput struct {
 		Err chan error
 	}
+	BarCalled chan struct{}
 }
 
 func newFakeMock() *fakeMock {
@@ -32,6 +33,7 @@ func newFakeMock() *fakeMock {
 	m.FooInput.Arg0 = make(chan int, 100)
 	m.FooInput.Arg1 = make(chan string, 100)
 	m.FooOutput.Err = make(chan error, 100)
+	m.BarCalled = make(chan struct{}, 100)
 	return m
 }
 
@@ -40,6 +42,10 @@ func (m *fakeMock) Foo(arg0 int, arg1 string) error {
 	m.FooInput.Arg0 <- arg0
 	m.FooInput.Arg1 <- arg1
 	return <-m.FooOutput.Err
+}
+
+func (m *fakeMock) Bar() {
+	m.BarCalled <- struct{}{}
 }
 
 type fakeVariadicMock struct {
@@ -72,10 +78,10 @@ func TestHaveMethodExecuted(t *testing.T) {
 	o.Spec("it fails gracefully if the requested method isn't found", func(t *testing.T, expect expectation) {
 		fm := newFakeMock()
 
-		m := pers.HaveMethodExecuted("Bar")
+		m := pers.HaveMethodExecuted("Invalid")
 		_, err := m.Match(fm)
 		expect(err).To(haveOccurred())
-		expect(err.Error()).To(equal("pers: could not find method 'Bar' on type *pers_test.fakeMock"))
+		expect(err.Error()).To(equal("pers: could not find method 'Invalid' on type *pers_test.fakeMock"))
 	})
 
 	o.Spec("it drains a value off of each relevant channel", func(t *testing.T, expect expectation) {
@@ -113,6 +119,16 @@ func TestHaveMethodExecuted(t *testing.T) {
 		_, err := m.Match(newFakeMock())
 		expect(err).To(haveOccurred())
 		expect(err.Error()).To(equal("pers: expected method Foo to have been called, but it was not"))
+	})
+
+	o.Spec("it can handle methods with no input or output", func(t *testing.T, expect expectation) {
+		fm := newFakeMock()
+		fm.Bar()
+
+		m := pers.HaveMethodExecuted("Bar")
+		_, err := m.Match(fm)
+
+		expect(err).To(not(haveOccurred()))
 	})
 
 	o.Spec("it waits for a method to be called", func(t *testing.T, expect expectation) {
