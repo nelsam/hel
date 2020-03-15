@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/a8m/expect"
-	"github.com/nelsam/hel/mocks"
+	"github.com/nelsam/hel/v2/mocks"
 )
 
 func TestMockSimpleMethod(t *testing.T) {

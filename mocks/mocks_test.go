@@ -11,8 +11,8 @@ import (
 	"testing"
 
 	"github.com/a8m/expect"
-	"github.com/nelsam/hel/mocks"
-	"github.com/nelsam/hel/types"
+	"github.com/nelsam/hel/v2/mocks"
+	"github.com/nelsam/hel/v2/types"
 )
 
 func TestGenerate(t *testing.T) {

@@ -8,7 +8,7 @@ package mocks_test
 import (
 	"go/ast"
 
-	"github.com/nelsam/hel/types"
+	"github.com/nelsam/hel/v2/types"
 )
 
 type mockTypeFinder struct {

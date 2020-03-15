@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/nelsam/hel/packages"
+	"github.com/nelsam/hel/v2/packages"
 	"github.com/poy/onpar"
 	"github.com/poy/onpar/expect"
 	"github.com/poy/onpar/matchers"
@@ -42,14 +42,14 @@ func TestLoad(t *testing.T) {
 		expect(dirs[0].Path()).To(equal(filepath.Join(wd)))
 		expect(dirs[0].Package().Name).To(equal("packages"))
 
-		dirs = packages.Load("github.com/nelsam/hel/mocks")
+		dirs = packages.Load("github.com/nelsam/hel/v2/mocks")
 		expect(dirs).To(haveLen(1))
 		expect(dirs[0].Path()).To(equal(filepath.Join(filepath.Dir(wd), "mocks")))
 
-		dirs = packages.Load("github.com/nelsam/hel/...")
+		dirs = packages.Load("github.com/nelsam/hel/v2/...")
 		expect(dirs).To(haveLen(7))
 
-		dirs = packages.Load("github.com/nelsam/hel")
+		dirs = packages.Load("github.com/nelsam/hel/v2")
 		expect(dirs).To(haveLen(1))
 
 		_, err = dirs[0].Import("golang.org/x/tools/go/packages")
@@ -62,7 +62,7 @@ func TestLoad(t *testing.T) {
 		expect(pkg).To(not(beNil()))
 		expect(pkg.Name).To(equal("filepath"))
 
-		pkg, err = dir.Import("github.com/nelsam/hel/packages")
+		pkg, err = dir.Import("github.com/nelsam/hel/v2/packages")
 		expect(err).To(not(haveOccurred()))
 		expect(pkg).To(not(beNil()))
 		expect(pkg.Name).To(equal("packages"))

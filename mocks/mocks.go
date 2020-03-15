@@ -17,7 +17,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/nelsam/hel/types"
+	"github.com/nelsam/hel/v2/types"
 	"golang.org/x/tools/go/ast/astutil"
 )
 

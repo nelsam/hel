@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nelsam/hel/mocks"
-	"github.com/nelsam/hel/packages"
-	"github.com/nelsam/hel/types"
+	"github.com/nelsam/hel/v2/mocks"
+	"github.com/nelsam/hel/v2/packages"
+	"github.com/nelsam/hel/v2/types"
 	"github.com/spf13/cobra"
 )
 

@@ -8,8 +8,8 @@ import (
 	"go/ast"
 	"testing"
 
-	"github.com/nelsam/hel/pers"
-	"github.com/nelsam/hel/types"
+	"github.com/nelsam/hel/v2/pers"
+	"github.com/nelsam/hel/v2/types"
 	"github.com/poy/onpar"
 	"github.com/poy/onpar/expect"
 	"github.com/poy/onpar/matchers"
