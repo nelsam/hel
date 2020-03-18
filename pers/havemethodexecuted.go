@@ -11,6 +11,13 @@ import (
 	"time"
 )
 
+// Matcher is any type that can match values.  Some code in this package supports
+// matching against child matchers, for example:
+//    HaveBeenExecuted("Foo", WithArgs(matchers.HaveLen(12)))
+type Matcher interface {
+	Match(actual interface{}) (interface{}, error)
+}
+
 type any int
 
 // Any is a special value to tell pers to allow any value at the position used.
@@ -155,6 +162,13 @@ func diff(actual, expected interface{}) (matched bool, actualOutput, expectedOut
 func diffV(av, ev reflect.Value) (matched bool, actualOutput, expectedOutput string) {
 	if ev.Interface() == Any {
 		return true, fmt.Sprintf("%#v", av.Interface()), "{ANY}"
+	}
+	if m, ok := ev.Interface().(Matcher); ok {
+		_, err := m.Match(av.Interface())
+		if err != nil {
+			return false, fmt.Sprintf(">%#v<", av.Interface()), fmt.Sprintf(">matcher failed: %s<", err)
+		}
+		return true, fmt.Sprintf("%#v", av.Interface()), fmt.Sprintf("matcher %v", m)
 	}
 	if av.Kind() != ev.Kind() {
 		format := ">type mismatch: %#v<"

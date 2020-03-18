@@ -7,12 +7,14 @@ package pers_test
 import (
 	"errors"
 	"fmt"
+	"log"
 	"testing"
 	"time"
 
 	"github.com/nelsam/hel/v2/pers"
 	"github.com/poy/onpar"
 	"github.com/poy/onpar/expect"
+	"github.com/poy/onpar/matchers"
 )
 
 type fakeMock struct {
@@ -200,6 +202,17 @@ func TestHaveMethodExecuted(t *testing.T) {
 		fm.FooInput.Args <- []string{"foo", "bar"}
 		m := pers.HaveMethodExecuted("Foo", pers.WithArgs("foo", "bar"))
 		_, err := m.Match(fm)
+		expect(err).To(not(haveOccurred()))
+	})
+
+	o.Spec("it can accept other matchers", func(t *testing.T, expect expectation) {
+		fm := newFakeMock()
+		fm.FooOutput.Err <- nil
+		fm.Foo(123, "this is a value")
+
+		m := pers.HaveMethodExecuted("Foo", pers.WithArgs(123, matchers.ContainSubstring("value")))
+		_, err := m.Match(fm)
+		log.Print(err)
 		expect(err).To(not(haveOccurred()))
 	})
 }
