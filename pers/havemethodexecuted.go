@@ -11,6 +11,13 @@ import (
 	"time"
 )
 
+type any int
+
+// Any is a special value to tell pers to allow any value at the position used.
+// For example, you can assert only on the second argument with:
+//     HaveMethodExecuted("Foo", WithArgs(Any, 22))
+const Any any = -1
+
 // HaveMethodExecutedOption is an option function for the HaveMethodExecutedMatcher.
 type HaveMethodExecutedOption func(HaveMethodExecutedMatcher) HaveMethodExecutedMatcher
 
@@ -145,11 +152,10 @@ func diff(actual, expected interface{}) (matched bool, actualOutput, expectedOut
 	return diffV(reflect.ValueOf(actual), reflect.ValueOf(expected))
 }
 
-type span struct {
-	start, end int
-}
-
 func diffV(av, ev reflect.Value) (matched bool, actualOutput, expectedOutput string) {
+	if ev.Interface() == Any {
+		return true, fmt.Sprintf("%#v", av.Interface()), "{ANY}"
+	}
 	if av.Kind() != ev.Kind() {
 		format := ">type mismatch: %#v<"
 		return false, fmt.Sprintf(format, av.Interface()), fmt.Sprintf(format, ev.Interface())
