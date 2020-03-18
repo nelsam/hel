@@ -153,8 +153,8 @@ func TestHaveMethodExecuted(t *testing.T) {
 
 	for _, test := range []struct {
 		name string
-		arg0 int
-		arg1 string
+		arg0 interface{}
+		arg1 interface{}
 		err  error
 	}{
 		{
@@ -164,10 +164,10 @@ func TestHaveMethodExecuted(t *testing.T) {
 			err:  errors.New(`pers: Foo was called with (>123<, "this is a value"); expected (>122<, "this is a value")`),
 		},
 		{
-			name: "fails due to a mismatch on the first argument",
+			name: "fails due to a mismatch on the second argument",
 			arg0: 123,
 			arg1: "this is a val",
-			err:  errors.New(`pers: Foo was called with (123, >"this is a value"<); expected (122, >"this is a val"<)`),
+			err:  errors.New(`pers: Foo was called with (123, >"this is a value"<); expected (123, >"this is a val"<)`),
 		},
 		{
 			name: "passes when arguments match",
@@ -175,7 +175,14 @@ func TestHaveMethodExecuted(t *testing.T) {
 			arg1: "this is a value",
 			err:  nil,
 		},
+		{
+			name: "passes when Any is passed in",
+			arg0: pers.Any,
+			arg1: pers.Any,
+			err:  nil,
+		},
 	} {
+		test := test
 		o.Spec(test.name, func(t *testing.T, expect expectation) {
 			fm := newFakeMock()
 			fm.FooOutput.Err <- nil
