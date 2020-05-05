@@ -7,7 +7,6 @@ package pers_test
 import (
 	"errors"
 	"fmt"
-	"log"
 	"testing"
 	"time"
 
@@ -163,13 +162,19 @@ func TestHaveMethodExecuted(t *testing.T) {
 			name: "fails due to a mismatch on the first argument",
 			arg0: 122,
 			arg1: "this is a value",
-			err:  errors.New(`pers: Foo was called with (>123<, "this is a value"); expected (>122<, "this is a value")`),
+			err:  errors.New(`pers: Foo was called with incorrect arguments: [ >123!=122<, "this is a value" ]`),
 		},
 		{
 			name: "fails due to a mismatch on the second argument",
 			arg0: 123,
 			arg1: "this is a val",
-			err:  errors.New(`pers: Foo was called with (123, >"this is a value"<); expected (123, >"this is a val"<)`),
+			err:  errors.New(`pers: Foo was called with incorrect arguments: [ 123, "this is a val>ue!=<" ]`),
+		},
+		{
+			name: "doesn't show Any in failing diff",
+			arg0: 123,
+			arg1: "this value",
+			err:  errors.New(`pers: Foo was called with incorrect arguments: [ 123, "this >is a !=<value" ]`),
 		},
 		{
 			name: "passes when arguments match",
@@ -212,7 +217,6 @@ func TestHaveMethodExecuted(t *testing.T) {
 
 		m := pers.HaveMethodExecuted("Foo", pers.WithArgs(123, matchers.ContainSubstring("value")))
 		_, err := m.Match(fm)
-		log.Print(err)
 		expect(err).To(not(haveOccurred()))
 	})
 }
