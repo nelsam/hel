@@ -6,19 +6,18 @@ package packages
 
 import (
 	"fmt"
-	"go/ast"
 	"go/build"
-	"go/parser"
-	"go/token"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"golang.org/x/tools/go/packages"
 )
 
 var (
 	cwd       string
 	gopathEnv = os.Getenv("GOPATH")
-	gopath    []string
+	gopath    = strings.Split(gopathEnv, string(os.PathListSeparator))
 )
 
 func init() {
@@ -31,7 +30,8 @@ func init() {
 
 // Dir represents a directory containing go files.
 type Dir struct {
-	path string
+	pkg    *packages.Package
+	fsPath string
 }
 
 // Load looks for directories matching the passed in package patterns
@@ -42,44 +42,53 @@ func Load(pkgPatterns ...string) []Dir {
 }
 
 func load(fromDir string, pkgPatterns ...string) (dirs []Dir) {
-	pkgPatterns = parsePatterns(fromDir, pkgPatterns...)
-	for _, pkgPattern := range pkgPatterns {
-		pkg, err := build.Import(pkgPattern, fromDir, build.AllowBinary)
-		if err != nil {
-			panic(err)
+	pkgs, err := packages.Load(&packages.Config{
+		Mode: packages.NeedName | packages.NeedFiles | packages.NeedImports | packages.NeedDeps | packages.NeedSyntax,
+	}, pkgPatterns...)
+	if err != nil {
+		panic(err)
+	}
+	for _, pkg := range pkgs {
+		fsPath := ""
+		if len(pkg.GoFiles) > 0 {
+			fsPath = filepath.Dir(pkg.GoFiles[0])
 		}
-		dirs = append(dirs, Dir{path: pkg.Dir})
+		dirs = append(dirs, Dir{pkg: pkg, fsPath: fsPath})
 	}
 	return dirs
 }
 
 // Path returns the file path to d.
 func (d Dir) Path() string {
-	return d.path
+	return d.fsPath
 }
 
-// Packages returns the AST for all packages in d.
-func (d Dir) Packages() map[string]*ast.Package {
-	packages, err := parser.ParseDir(token.NewFileSet(), d.Path(), nil, 0)
-	if err != nil {
-		panic(err)
-	}
-	return packages
+// Package returns the *packages.Package for d
+func (d Dir) Package() *packages.Package {
+	return d.pkg
 }
 
 // Import imports path from srcDir, then loads the ast for that package.
 // It ensures that the returned ast is for the package that would be
 // imported by an import clause.
-func (d Dir) Import(path string) (string, *ast.Package, error) {
-	pkgInfo, err := build.Import(path, d.Path(), 0)
-	if err != nil {
-		return "", nil, err
+func (d Dir) Import(path string) (*packages.Package, error) {
+	p, ok := nestedImport(d.pkg, path)
+	if !ok {
+		return nil, fmt.Errorf("Could not find import %s in package %s", path, d.Path())
 	}
-	newDir := load(d.Path(), path)[0]
-	if pkg, ok := newDir.Packages()[pkgInfo.Name]; ok {
-		return pkgInfo.Name, pkg, nil
+	return p, nil
+}
+
+func nestedImport(pkg *packages.Package, path string) (*packages.Package, bool) {
+	if p, ok := pkg.Imports[path]; ok {
+		return p, true
 	}
-	return "", nil, fmt.Errorf("Could not find package %s", path)
+	for _, p := range pkg.Imports {
+		if subp, ok := nestedImport(p, path); ok {
+			return subp, true
+		}
+	}
+	return nil, false
 }
 
 func parsePatterns(fromDir string, pkgPatterns ...string) (packages []string) {

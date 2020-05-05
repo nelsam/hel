@@ -7,11 +7,26 @@ package pers
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/poy/onpar/diff"
 	"github.com/poy/onpar/matchers"
 )
+
+// Matcher is any type that can match values.  Some code in this package supports
+// matching against child matchers, for example:
+//    HaveBeenExecuted("Foo", WithArgs(matchers.HaveLen(12)))
+type Matcher interface {
+	Match(actual interface{}) (interface{}, error)
+}
+
+type any int
+
+// Any is a special value to tell pers to allow any value at the position used.
+// For example, you can assert only on the second argument with:
+//     HaveMethodExecuted("Foo", WithArgs(Any, 22))
+const Any any = -1
 
 // HaveMethodExecutedOption is an option function for the HaveMethodExecutedMatcher.
 type HaveMethodExecutedOption func(HaveMethodExecutedMatcher) HaveMethodExecutedMatcher
@@ -35,13 +50,27 @@ func WithArgs(args ...interface{}) HaveMethodExecutedOption {
 	}
 }
 
+// StoreArgs returns a HaveMethodExecutedOption which stores the arguments passed to
+// the method in the addresses provided.
+//
+// StoreArgs will panic if the values provided are not pointers or cannot store data
+// of the same type as the method arguments.
+func StoreArgs(targets ...interface{}) HaveMethodExecutedOption {
+	return func(m HaveMethodExecutedMatcher) HaveMethodExecutedMatcher {
+		m.saveTo = targets
+		return m
+	}
+}
+
 // HaveMethodExecutedMatcher is a matcher to ensure that a method on a mock was
 // executed.
 type HaveMethodExecutedMatcher struct {
 	MethodName string
 	within     time.Duration
 	args       []interface{}
-	differ     matchers.Differ
+	saveTo     []interface{}
+
+	differ matchers.Differ
 }
 
 // HaveMethodExecuted returns a matcher that asserts that the method referenced
@@ -86,6 +115,10 @@ func (m HaveMethodExecutedMatcher) Match(v interface{}) (interface{}, error) {
 		return v, fmt.Errorf("pers: expected method %s to have been called, but it was not", m.MethodName)
 	}
 	inputField := mv.FieldByName(m.MethodName + "Input")
+	if !inputField.IsValid() {
+		return v, nil
+	}
+
 	var calledWith []interface{}
 	for i := 0; i < inputField.NumField(); i++ {
 		fv, ok := inputField.Field(i).Recv()
@@ -93,6 +126,10 @@ func (m HaveMethodExecutedMatcher) Match(v interface{}) (interface{}, error) {
 			return v, fmt.Errorf("pers: field %s is closed; cannot perform matches against this mock", inputField.Type().Field(i).Name)
 		}
 		calledWith = append(calledWith, fv.Interface())
+
+		if m.saveTo != nil {
+			reflect.ValueOf(m.saveTo[i]).Elem().Set(fv)
+		}
 	}
 	if len(m.args) == 0 {
 		return v, nil
@@ -112,14 +149,47 @@ func (m HaveMethodExecutedMatcher) Match(v interface{}) (interface{}, error) {
 		return v, fmt.Errorf("pers: expected %d arguments, but got %d", len(calledWith), len(args))
 	}
 
+	var argsDiff []string
 	matched := true
 	for i, a := range args {
 		called := calledWith[i]
-		matched = matched && reflect.DeepEqual(called, a)
+		format := formatFor(called)
+		calledStr := fmt.Sprintf(format, called)
+		switch src := a.(type) {
+		case any:
+			argsDiff = append(argsDiff, calledStr)
+		case Matcher:
+			_, err := src.Match(called)
+			if err != nil {
+				matched = false
+				argsDiff = append(argsDiff, m.differ.Diff("", err.Error()))
+				break
+			}
+			argsDiff = append(argsDiff, calledStr)
+		default:
+			if !reflect.DeepEqual(called, a) {
+				matched = false
+				argsDiff = append(argsDiff, fmt.Sprintf(format, m.differ.Diff(called, a)))
+				break
+			}
+			argsDiff = append(argsDiff, calledStr)
+		}
 	}
 	if matched {
 		return v, nil
 	}
-	msg := "pers: %s was called with incorrect arguments: %s"
-	return v, fmt.Errorf(msg, m.MethodName, m.differ.Diff(calledWith, args))
+	const msg = "pers: %s was called with incorrect arguments: [ %s ]"
+	return v, fmt.Errorf(msg, m.MethodName, strings.Join(argsDiff, ", "))
+}
+
+// formatFor returns the format string that should be used for
+// the passed in actual type.
+func formatFor(actual interface{}) string {
+	switch actual.(type) {
+	case string:
+		return `"%v"`
+	default:
+		return `%v`
+
+	}
 }
