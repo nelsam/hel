@@ -68,6 +68,28 @@ func (m *fakeVariadicMock) Foo(args ...string) {
 	m.FooInput.Args <- args
 }
 
+type fakeSliceMapMock struct {
+	FooCalled chan struct{}
+	FooInput  struct {
+		Arg0 chan []interface{}
+		Arg1 chan map[string]interface{}
+	}
+}
+
+func newFakeSliceMapMock() *fakeSliceMapMock {
+	m := &fakeSliceMapMock{}
+	m.FooCalled = make(chan struct{}, 100)
+	m.FooInput.Arg0 = make(chan []interface{}, 100)
+	m.FooInput.Arg1 = make(chan map[string]interface{}, 100)
+	return m
+}
+
+func (m *fakeSliceMapMock) Foo(arg0 []interface{}, arg1 map[string]interface{}) {
+	m.FooCalled <- struct{}{}
+	m.FooInput.Arg0 <- arg0
+	m.FooInput.Arg1 <- arg1
+}
+
 func TestHaveMethodExecuted(t *testing.T) {
 	o := onpar.New()
 	defer o.Run(t)
@@ -200,6 +222,42 @@ func TestHaveMethodExecuted(t *testing.T) {
 			expect(err).To(equal(test.err))
 		})
 	}
+
+	o.Spec("it checks for Any in slices", func(t *testing.T, expect expectation) {
+		fm := newFakeSliceMapMock()
+		fm.Foo([]interface{}{"foo", "bar"}, nil)
+
+		m := pers.HaveMethodExecuted("Foo", pers.WithArgs([]interface{}{pers.Any, "bar"}, nil))
+		_, err := m.Match(fm)
+		expect(err).To(not(haveOccurred()))
+	})
+
+	o.Spec("it checks for Matcher types in slices", func(t *testing.T, expect expectation) {
+		fm := newFakeSliceMapMock()
+		fm.Foo([]interface{}{"foo", "bar"}, nil)
+
+		m := pers.HaveMethodExecuted("Foo", pers.WithArgs([]interface{}{matchers.ContainSubstring("oo"), "bar"}, nil))
+		_, err := m.Match(fm)
+		expect(err).To(not(haveOccurred()))
+	})
+
+	o.Spec("it checks for Any in maps", func(t *testing.T, expect expectation) {
+		fm := newFakeSliceMapMock()
+		fm.Foo(nil, map[string]interface{}{"foo": "bar"})
+
+		m := pers.HaveMethodExecuted("Foo", pers.WithArgs(nil, map[string]interface{}{"foo": pers.Any}))
+		_, err := m.Match(fm)
+		expect(err).To(not(haveOccurred()))
+	})
+
+	o.Spec("it checks for Matcher types in maps", func(t *testing.T, expect expectation) {
+		fm := newFakeSliceMapMock()
+		fm.Foo(nil, map[string]interface{}{"foo": "bar"})
+
+		m := pers.HaveMethodExecuted("Foo", pers.WithArgs(nil, map[string]interface{}{"foo": matchers.ContainSubstring("ar")}))
+		_, err := m.Match(fm)
+		expect(err).To(not(haveOccurred()))
+	})
 
 	o.Spec("it handles variadic arguments", func(t *testing.T, expect expectation) {
 		fm := newFakeVariadicMock()

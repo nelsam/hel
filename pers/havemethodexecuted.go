@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/poy/onpar/diff"
+	"github.com/poy/onpar/expect"
 	"github.com/poy/onpar/matchers"
 )
 
@@ -148,38 +149,109 @@ func (m HaveMethodExecutedMatcher) Match(v interface{}) (interface{}, error) {
 	if len(args) != len(calledWith) {
 		return v, fmt.Errorf("pers: expected %d arguments, but got %d", len(calledWith), len(args))
 	}
-
-	var argsDiff []string
-	matched := true
-	for i, a := range args {
-		called := calledWith[i]
-		format := formatFor(called)
-		calledStr := fmt.Sprintf(format, called)
-		switch src := a.(type) {
-		case any:
-			argsDiff = append(argsDiff, calledStr)
-		case Matcher:
-			_, err := src.Match(called)
-			if err != nil {
-				matched = false
-				argsDiff = append(argsDiff, m.differ.Diff("", err.Error()))
-				break
-			}
-			argsDiff = append(argsDiff, calledStr)
-		default:
-			if !reflect.DeepEqual(called, a) {
-				matched = false
-				argsDiff = append(argsDiff, fmt.Sprintf(format, m.differ.Diff(called, a)))
-				break
-			}
-			argsDiff = append(argsDiff, calledStr)
-		}
-	}
+	matched, diff := m.sliceDiff(reflect.ValueOf(calledWith), reflect.ValueOf(args))
 	if matched {
 		return v, nil
 	}
-	const msg = "pers: %s was called with incorrect arguments: [ %s ]"
-	return v, fmt.Errorf(msg, m.MethodName, strings.Join(argsDiff, ", "))
+	const msg = "pers: %s was called with incorrect arguments: %s"
+	return v, fmt.Errorf(msg, m.MethodName, diff)
+}
+
+func (m HaveMethodExecutedMatcher) sliceDiff(actual, expected reflect.Value) (bool, string) {
+	if actual.Len() != expected.Len() {
+		return false, m.differ.Diff(fmt.Sprintf("length %d", actual.Len()), fmt.Sprintf("length %d", expected.Len()))
+	}
+	var diffs []string
+	matched := true
+	for i := 0; i < actual.Len(); i++ {
+		match, diff := m.valueDiff(actual.Index(i), expected.Index(i))
+		matched = matched && match
+		diffs = append(diffs, diff)
+	}
+	return matched, fmt.Sprintf("[ %s ]", strings.Join(diffs, ", "))
+}
+
+func (m HaveMethodExecutedMatcher) mapDiff(actual, expected reflect.Value) (bool, string) {
+	matched := true
+	var diffs []string
+	for _, k := range expected.MapKeys() {
+		eV := expected.MapIndex(k)
+		aV := actual.MapIndex(k)
+		if !aV.IsValid() {
+			matched = false
+			diffs = append(diffs, m.differ.Diff("missing key: %v", k.Interface()))
+			continue
+		}
+		match, diff := m.valueDiff(aV, eV)
+		matched = matched && match
+		diffs = append(diffs, fmt.Sprintf(formatFor(k)+": %s", k.Interface(), diff))
+	}
+	return matched, fmt.Sprintf("{ %s }", strings.Join(diffs, ", "))
+}
+
+func (m HaveMethodExecutedMatcher) valueDiff(actual, expected reflect.Value) (bool, string) {
+	for actual.Kind() == reflect.Interface {
+		actual = actual.Elem()
+	}
+	for expected.Kind() == reflect.Interface {
+		expected = expected.Elem()
+	}
+	if !actual.IsValid() || isNil(actual) {
+		if !expected.IsValid() || isNil(expected) {
+			return true, "<nil>"
+		}
+		return false, m.differ.Diff(nil, expected.Interface())
+	}
+	if !expected.IsValid() || isNil(expected) {
+		return false, m.differ.Diff(actual.Interface(), nil)
+	}
+
+	format := formatFor(actual.Interface())
+	actualStr := fmt.Sprintf(format, actual.Interface())
+	switch src := expected.Interface().(type) {
+	case any:
+		return true, actualStr
+	case Matcher:
+		if dm, ok := src.(expect.DiffMatcher); ok {
+			dm.UseDiffer(m.differ)
+		}
+		_, err := src.Match(actual.Interface())
+		if err != nil {
+			return false, err.Error()
+		}
+		return true, actualStr
+	default:
+		if !expected.IsValid() {
+			if actual.IsNil() {
+				return true, actualStr
+			}
+			return false, fmt.Sprintf(format, m.differ.Diff(actual.Interface(), nil))
+		}
+		if actual.Kind() != expected.Kind() {
+			return false, m.differ.Diff(actual.Interface(), expected.Interface())
+		}
+		switch actual.Kind() {
+		case reflect.Slice, reflect.Array:
+			return m.sliceDiff(actual, expected)
+		case reflect.Map:
+			return m.mapDiff(actual, expected)
+		default:
+			a, e := actual.Interface(), expected.Interface()
+			if !reflect.DeepEqual(a, e) {
+				return false, fmt.Sprintf(format, m.differ.Diff(a, e))
+			}
+			return true, actualStr
+		}
+	}
+}
+
+func isNil(v reflect.Value) bool {
+	switch v.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
+		return v.IsNil()
+	default:
+		return false
+	}
 }
 
 // formatFor returns the format string that should be used for
