@@ -250,6 +250,15 @@ func TestHaveMethodExecuted(t *testing.T) {
 		expect(err).To(not(haveOccurred()))
 	})
 
+	o.Spec("nil satisfies Any", func(t *testing.T, expect expectation) {
+		fm := newFakeSliceMapMock()
+		fm.Foo(nil, nil)
+
+		m := pers.HaveMethodExecuted("Foo", pers.WithArgs(pers.Any, pers.Any))
+		_, err := m.Match(fm)
+		expect(err).To(not(haveOccurred()))
+	})
+
 	o.Spec("it checks for Matcher types in maps", func(t *testing.T, expect expectation) {
 		fm := newFakeSliceMapMock()
 		fm.Foo(nil, map[string]interface{}{"foo": "bar"})

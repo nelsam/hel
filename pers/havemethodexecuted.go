@@ -200,7 +200,6 @@ func (m HaveMethodExecutedMatcher) valueDiff(actual, expected reflect.Value) (bo
 		if !expected.IsValid() || isNil(expected) {
 			return true, "<nil>"
 		}
-		return false, m.differ.Diff(nil, expected.Interface())
 	}
 	if !expected.IsValid() || isNil(expected) {
 		return false, m.differ.Diff(actual.Interface(), nil)
@@ -221,12 +220,6 @@ func (m HaveMethodExecutedMatcher) valueDiff(actual, expected reflect.Value) (bo
 		}
 		return true, actualStr
 	default:
-		if !expected.IsValid() {
-			if actual.IsNil() {
-				return true, actualStr
-			}
-			return false, fmt.Sprintf(format, m.differ.Diff(actual.Interface(), nil))
-		}
 		if actual.Kind() != expected.Kind() {
 			return false, m.differ.Diff(actual.Interface(), expected.Interface())
 		}
