@@ -34,7 +34,7 @@ in your `PATH`.
 
 ### Go Get
 
-Hel is go-gettable: `go get github.com/nelsam/hel`
+Hel is go-gettable: `go get github.com/nelsam/hel/v2`
 
 In the near future, I'll set up a CI system which uploads binaries to
 github releases, as well.
