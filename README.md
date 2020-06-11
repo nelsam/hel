@@ -34,10 +34,29 @@ in your `PATH`.
 
 ### Go Get
 
-Hel is go-gettable: `go get github.com/nelsam/hel/v2`
+Hel is go-gettable
 
-In the near future, I'll set up a CI system which uploads binaries to
-github releases, as well.
+#### Without Modules
+
+I put a lot of effort into backward compatibility on the master branch.
+If you're avoiding the go modules tire fire and still using normal `GOPATH`,
+you can just use the base repository URL.
+
+`go get github.com/nelsam/hel`
+
+WARNING: if you're using modules, this will pull down `v1`, which is
+very old.  With modules, if the major version isn't included in the
+import path, then it will pull down `v1`.  Unless there is no `v1`,
+in which case it will pull down `master`.
+
+#### Using Modules
+
+If you want to completely lock down hel's version, I have versioned
+branches from which I create semantically versioned tags.  Master is
+periodically merged in to the latest major version branch and a new
+tag is released.
+
+`go get github.com/nelsam/hel/v2`
 
 ## Usage
 
