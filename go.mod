@@ -9,3 +9,13 @@ require (
 )
 
 go 1.13
+
+retract (
+	// Since go modules are such a pain beyond v1, we are following on the heels
+	// of a number of other projects and only releasing v0.x.x. This means that
+	// all versions starting with v1.x.x are no longer valid.
+	//
+	// If you are using any version of hel from v1 through v4, please upgrade to
+	// the latest v0.x.x.
+	[v1.0.0, v1.0.3]
+)
